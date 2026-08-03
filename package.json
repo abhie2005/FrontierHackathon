@@ -1,0 +1,25 @@
+{
+  "name": "warehouse-memory-network",
+  "version": "1.0.0",
+  "description": "Adaptive mode selection network — FalkorDB memory + Guild.ai agents + RocketRide execution over a live flu-outbreak signal.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "seed": "tsx src/falkordb/seed.ts",
+    "query": "tsx src/falkordb/demo-query.ts",
+    "agents": "tsx src/agents/pipeline.ts",
+    "pipeline": "tsx src/run.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "falkordb": "^6.7.0",
+    "rocketride": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
