@@ -13,9 +13,12 @@
     "pipeline": "tsx src/run.ts",
     "demo": "tsx src/run-demo.ts",
     "ui": "node server.cjs",
+    "laser:listen": "tsx src/laserdata/listen.ts",
+    "laser:fire": "tsx src/laserdata/fire.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@laserdata/laser-sdk": "^0.0.1",
     "falkordb": "^6.7.0",
     "rocketride": "^1.3.0"
   },

@@ -71,7 +71,12 @@
     padding:12px 26px; border-bottom:1px solid var(--line);
     background:rgba(6,6,7,0.55); backdrop-filter:blur(16px) saturate(1.2); flex-wrap:wrap;
   }
-  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand{ display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; cursor:pointer; }
+  .brand .logo{ transition:border-color .18s ease, box-shadow .18s ease, transform .12s ease; }
+  .brand:hover .logo{ border-color:#4a4a53; box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), 0 0 14px rgba(255,255,255,0.12); }
+  .brand:active{ transform:translateY(0.5px); }
+  .brand .name{ transition:opacity .18s ease; }
+  .brand:hover .name{ opacity:0.85; }
   .logo{
     width:30px; height:30px; border-radius:8px; border:1px solid var(--line-2);
     background:linear-gradient(160deg,#1a1a1f,#0c0c0e);
@@ -260,7 +265,7 @@
 </section>
 
 <header id="nav">
-  <div class="brand">
+  <a class="brand" href="#top" aria-label="Hopper — back to top">
     <span class="logo" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none">
         <path d="M6 15 L12 6 L18 15" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -271,7 +276,7 @@
       <div class="name"><b>Hopper</b></div>
       <div class="tag">adaptive distribution network</div>
     </div>
-  </div>
+  </a>
   <div class="bar-right">
     <div class="status"><span class="dot" id="connDot"></span><span id="connText">connecting…</span></div>
     <div class="controls">
