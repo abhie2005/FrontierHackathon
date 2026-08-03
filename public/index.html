@@ -276,7 +276,37 @@
   .log-entry.rocketride .tag{ background:#fafafa; color:#0a0a0a; border-color:#fafafa; }
   .log-entry .msg{ color:var(--t-1); line-height:1.5; }
 
-  footer{ text-align:center; color:var(--t-4); font-size:11px; font-family:var(--mono); padding:24px; }
+  /* ---------- site footer ---------- */
+  .site-footer{ position:relative; width:100%; max-width:1100px; margin:40px auto 0; padding:56px 26px 40px;
+    border-top:1px solid var(--line); border-radius:32px 32px 0 0;
+    background:radial-gradient(35% 128px at 50% 0%, rgba(255,255,255,0.06), transparent); }
+  .footer-glow{ position:absolute; top:0; left:50%; transform:translate(-50%,-50%);
+    width:33%; height:1px; background:rgba(255,255,255,0.25); filter:blur(2px); border-radius:999px; }
+  .footer-grid{ display:grid; gap:32px; }
+  @media (min-width:900px){ .footer-grid{ grid-template-columns:1fr 2fr; gap:40px; } }
+  .footer-brand{ display:flex; flex-direction:column; gap:14px; }
+  .footer-copy{ font-size:12.5px; color:var(--t-3); font-family:var(--mono); margin:0; }
+  .footer-links{ display:grid; grid-template-columns:repeat(2,1fr); gap:28px; }
+  @media (min-width:640px){ .footer-links{ grid-template-columns:repeat(4,1fr); } }
+  .footer-col h3{ font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--t-2);
+    font-family:var(--mono); font-weight:600; margin:0 0 14px; }
+  .footer-col ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .footer-col a{ font-size:13px; color:var(--t-3); text-decoration:none; transition:color .2s ease; }
+  .footer-col a:hover{ color:var(--t-1); }
+  .footer-col li{ display:flex; flex-direction:column; gap:4px; }
+  .footer-social{ display:flex; gap:8px; }
+  .footer-social a{ font-size:10.5px; font-family:var(--mono); color:var(--t-4); }
+  .footer-social a:hover{ color:var(--t-2); }
+  .footer-bottom{ margin-top:40px; padding-top:20px; border-top:1px solid var(--line);
+    font-size:11px; color:var(--t-4); font-family:var(--mono); text-align:center; }
+  .footer-bottom code{ color:var(--t-3); }
+
+  .animate-in{ opacity:0; filter:blur(4px); transform:translateY(-8px);
+    transition:opacity .8s ease, filter .8s ease, transform .8s ease; transition-delay:var(--d, 0s); }
+  .animate-in.in-view{ opacity:1; filter:blur(0); transform:translateY(0); }
+  @media (prefers-reduced-motion: reduce){
+    .animate-in{ opacity:1; filter:none; transform:none; transition:none; }
+  }
   footer code{ color:var(--t-3); }
   .scroll-thin::-webkit-scrollbar{ width:8px; height:8px; }
   .scroll-thin::-webkit-scrollbar-thumb{ background:var(--line-2); border-radius:8px; }
@@ -538,7 +568,75 @@
   </div>
 </main>
 
-<footer>Hopper · <code>POST /api/trigger</code> runs the live pipeline · <code>GET /api/events</code> streams it back</footer>
+<footer class="site-footer">
+  <div class="footer-glow"></div>
+  <div class="footer-grid">
+    <div class="footer-brand animate-in">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M6 15 L12 6 L18 15" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6 19 L12 12 L18 19" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
+        </svg>
+      </span>
+      <p class="footer-copy">© <span id="footerYear"></span> Hopper — built for Memory Meets Motion.</p>
+    </div>
+
+    <div class="footer-links">
+      <div class="footer-col animate-in" style="--d:0.1s">
+        <h3>Product</h3>
+        <ul>
+          <li><a href="/">Dashboard</a></li>
+          <li><a href="/sponsors.html">Powered By</a></li>
+          <li><a href="#dashboard">Live network</a></li>
+        </ul>
+      </div>
+      <div class="footer-col animate-in" style="--d:0.2s">
+        <h3>Stack</h3>
+        <ul>
+          <li><a href="https://www.falkordb.com" target="_blank" rel="noopener">FalkorDB</a></li>
+          <li><a href="https://guild.ai" target="_blank" rel="noopener">Guild.ai</a></li>
+          <li><a href="https://rocketride.ai" target="_blank" rel="noopener">RocketRide</a></li>
+          <li><a href="https://laserdata.cloud" target="_blank" rel="noopener">LaserData</a></li>
+        </ul>
+      </div>
+      <div class="footer-col animate-in" style="--d:0.3s">
+        <h3>Project</h3>
+        <ul>
+          <li><a href="https://github.com/abhie2005/FrontierHackathon" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://github.com/abhie2005/FrontierHackathon/blob/main/README.md" target="_blank" rel="noopener">README</a></li>
+          <li><a href="https://github.com/abhie2005/FrontierHackathon/blob/main/DEPLOY.md" target="_blank" rel="noopener">Deploy guide</a></li>
+        </ul>
+      </div>
+      <div class="footer-col animate-in" style="--d:0.4s">
+        <h3>Team</h3>
+        <ul>
+          <li>
+            <a href="https://github.com/abhie2005" target="_blank" rel="noopener">Abhishek Rangani</a>
+            <span class="footer-social">
+              <a href="https://www.linkedin.com/in/abhishek-rangani/" target="_blank" rel="noopener">LinkedIn</a>
+              <a href="https://x.com/abhiex04" target="_blank" rel="noopener">X</a>
+            </span>
+          </li>
+          <li>
+            <a href="https://github.com/Felipeex" target="_blank" rel="noopener">Felipe Lima</a>
+            <span class="footer-social">
+              <a href="https://www.linkedin.com/in/felipeex/" target="_blank" rel="noopener">LinkedIn</a>
+              <a href="https://x.com/FelipeexDev" target="_blank" rel="noopener">X</a>
+            </span>
+          </li>
+          <li>
+            <a href="https://github.com/syssefim" target="_blank" rel="noopener">Serafim Sharkov</a>
+            <span class="footer-social">
+              <a href="https://www.linkedin.com/in/serafim-sharkov/" target="_blank" rel="noopener">LinkedIn</a>
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom"><code>POST /api/trigger</code> runs the live pipeline · <code>GET /api/events</code> streams it back</div>
+</footer>
 
 <script>
 const MODE_DATA = {
@@ -836,6 +934,21 @@ function connect(){
   es.onmessage = (e) => { try { handleEvent(JSON.parse(e.data)); } catch(err){ console.error('bad event', err); } };
 }
 connect();
+
+// --- footer: year + fade-in-on-scroll (mirrors the dashboard's reduced-motion handling) ---
+(function(){
+  var y = document.getElementById('footerYear');
+  if (y) y.textContent = new Date().getFullYear();
+
+  var els = document.querySelectorAll('.animate-in');
+  if (!('IntersectionObserver' in window)) { els.forEach(function(el){ el.classList.add('in-view'); }); return; }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if (entry.isIntersecting) { entry.target.classList.add('in-view'); io.unobserve(entry.target); }
+    });
+  }, { threshold: 0.15 });
+  els.forEach(function(el){ io.observe(el); });
+})();
 </script>
 
 <!-- ===================== HERO PARTICLE FIELD (vanilla port, monochrome) ===================== -->
