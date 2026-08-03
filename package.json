@@ -1,0 +1,26 @@
+{
+  "name": "frontiertower",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abhie2005/FrontierHackathon.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/abhie2005/FrontierHackathon/issues"
+  },
+  "homepage": "https://github.com/abhie2005/FrontierHackathon#readme",
+  "dependencies": {
+    "@laserdata/laser-sdk": "^0.0.1",
+    "dotenv": "^17.4.2"
+  }
+}
