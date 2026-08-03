@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hopper — Powered By</title>
+<style>
+  :root{
+    --bg: #050506; --panel: #0d0d0f;
+    --line: #1c1c21; --line-2: #2a2a31;
+    --t-1: #f4f4f5; --t-2: #a1a1aa; --t-3: #6b6b75;
+    --mono: ui-monospace, "SF Mono", "Geist Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{ background:var(--bg); color:var(--t-1); font-family:var(--sans); min-height:100vh; -webkit-font-smoothing:antialiased; }
+
+  header{
+    position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between;
+    gap:16px; padding:14px 30px; border-bottom:1px solid var(--line);
+    background:rgba(6,6,7,0.75); backdrop-filter:blur(16px) saturate(1.2); flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .logo{ width:30px; height:30px; border-radius:8px; border:1px solid var(--line-2);
+    background:linear-gradient(160deg,#1a1a1f,#0c0c0e); display:flex; align-items:center; justify-content:center; }
+  .logo svg{ width:16px; height:16px; }
+  .brand .name{ font-size:18px; font-weight:800; letter-spacing:-0.4px; }
+  .brand .tag{ font-size:11px; color:var(--t-3); font-family:var(--mono); margin-top:1px; }
+  nav{ display:flex; gap:8px; }
+  nav a{ font-size:12.5px; font-weight:600; color:var(--t-2); text-decoration:none; padding:9px 16px;
+    border:1px solid var(--line-2); border-radius:999px; transition:all .15s ease; }
+  nav a:hover{ color:#fff; border-color:#3d3d45; }
+  nav a.active{ background:#fafafa; color:#0a0a0a; border-color:#fafafa; }
+
+  main{ max-width:1100px; margin:0 auto; padding:80px 30px 100px; text-align:center; }
+  .eyebrow{ font-size:11px; text-transform:uppercase; letter-spacing:4px; color:var(--t-3);
+    font-family:var(--mono); font-weight:600; margin-bottom:18px; }
+  h1{ font-size:clamp(38px,6vw,64px); font-weight:800; letter-spacing:-0.04em; line-height:1.05; margin:0 0 20px;
+    background:linear-gradient(180deg,#ffffff 0%, #7a7a84 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .lede{ color:var(--t-2); font-size:17px; line-height:1.7; max-width:600px; margin:0 auto 64px; }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:18px; text-align:left; }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:32px 28px;
+    display:flex; flex-direction:column; gap:14px; transition:border-color .2s ease, transform .2s ease; }
+  .card:hover{ border-color:var(--line-2); transform:translateY(-2px); }
+  .card .top{ display:flex; align-items:center; justify-content:space-between; }
+  .card .ic{ width:48px; height:48px; border-radius:13px; border:1px solid var(--line-2);
+    background:linear-gradient(160deg,#1a1a1f,#0c0c0e); display:flex; align-items:center; justify-content:center;
+    font-size:22px; }
+  .pill{ font-size:10px; font-family:var(--mono); font-weight:700; padding:5px 11px; border-radius:999px;
+    text-transform:uppercase; letter-spacing:0.6px; white-space:nowrap; }
+  .pill.live{ background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.35); }
+  .pill.soon{ background:transparent; color:var(--t-3); border:1px dashed var(--line-2); }
+
+  .card h2{ font-size:22px; font-weight:800; margin:6px 0 0; letter-spacing:-0.2px; }
+  .card .role{ font-size:12px; color:var(--t-3); font-family:var(--mono); text-transform:uppercase; letter-spacing:1px; margin-top:-8px; }
+  .card p{ font-size:14.5px; color:var(--t-2); line-height:1.65; margin:4px 0 0; }
+  .card .highlight{ margin-top:auto; padding-top:14px; border-top:1px solid var(--line);
+    font-size:13px; color:var(--t-1); font-weight:600; display:flex; align-items:center; gap:8px; }
+  .card .highlight::before{ content:"→"; color:var(--t-3); font-weight:700; }
+
+  .card.full{ grid-column:1 / -1; }
+
+  footer{ text-align:center; color:var(--t-3); font-size:12px; font-family:var(--mono); padding:60px 24px 24px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M6 15 L12 6 L18 15" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M6 19 L12 12 L18 19" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
+      </svg>
+    </span>
+    <div>
+      <div class="name"><b>Hopper</b></div>
+      <div class="tag">adaptive distribution network</div>
+    </div>
+  </div>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/sponsors.html" class="active">Powered By</a>
+  </nav>
+</header>
+
+<main>
+  <div class="eyebrow">Built with</div>
+  <h1>Four real integrations,<br/>one working system</h1>
+  <p class="lede">Every partner technology below does real work in the live demo — reading memory, negotiating a
+    decision, and executing it — not just a logo on a slide.</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="top"><span class="ic">◆</span><span class="pill live">Live</span></div>
+      <h2>FalkorDB</h2>
+      <div class="role">Memory</div>
+      <p>The graph that remembers. Stock, demand, transport options, and every past decision live here — and grow with each run.</p>
+      <div class="highlight">Every decision gets written back — memory that compounds</div>
+    </div>
+
+    <div class="card">
+      <div class="top"><span class="ic">▲</span><span class="pill live">Live</span></div>
+      <h2>Guild.ai</h2>
+      <div class="role">Multi-agent coordination</div>
+      <p>Two autonomous agents negotiate cost against urgency in real time — a Risk Agent flags the danger, a Mode Agent picks the fix.</p>
+      <div class="highlight">A visible handoff between two agents, not one black box</div>
+    </div>
+
+    <div class="card">
+      <div class="top"><span class="ic">➤</span><span class="pill live">Live</span></div>
+      <h2>RocketRide</h2>
+      <div class="role">Execution</div>
+      <p>Turns a decision into action — one tool call switches the shipment's transport mode and confirms it's done.</p>
+      <div class="highlight">The moment a decision becomes a real-world action</div>
+    </div>
+
+    <div class="card">
+      <div class="top"><span class="ic">◑</span><span class="pill live">Live</span></div>
+      <h2>LaserData</h2>
+      <div class="role">Real-time signal</div>
+      <p>The spark that starts everything — a live demand spike event that flows straight into the pipeline.</p>
+      <div class="highlight">One event triggers the entire chain, end to end</div>
+    </div>
+  </div>
+</main>
+
+<footer>Hopper · adaptive distribution network</footer>
+
+</body>
+</html>
