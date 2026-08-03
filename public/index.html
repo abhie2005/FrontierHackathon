@@ -53,6 +53,12 @@
     color:var(--t-2); font-weight:400; }
   .hero-tagline b{ color:var(--t-1); font-weight:600; }
   .hero-cta{ margin-top:40px; pointer-events:auto; }
+  .hero-steps{ margin-top:34px; display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; }
+  .hero-step{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; color:var(--t-2); letter-spacing:0.2px; }
+  .hero-step b{ display:inline-flex; align-items:center; justify-content:center; width:19px; height:19px; flex-shrink:0;
+    border-radius:50%; border:1px solid var(--line-2); background:rgba(255,255,255,0.04); color:var(--t-1); font-size:10px; }
+  .hero-step-arrow{ color:var(--t-4); font-size:12px; }
+  @media (max-width:640px){ .hero-steps{ flex-direction:column; gap:10px; } .hero-step-arrow{ display:none; } }
   a.enter-btn{ display:inline-flex; align-items:center; gap:9px; text-decoration:none;
     background:#fafafa; color:#0a0a0a; font-weight:700; font-size:14px; padding:14px 26px; border-radius:999px;
     transition:transform .12s ease, box-shadow .25s; box-shadow:0 0 0 0 rgba(255,255,255,0.2); }
@@ -117,6 +123,25 @@
   button.primary:hover{ background:#fff; }
   button.ghost{ background:transparent; color:var(--t-2); border-color:var(--line); }
   button:disabled{ opacity:0.35; cursor:not-allowed; }
+  button.primary.loading:disabled{ opacity:1; cursor:wait; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .btn-spinner{ display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:7px; vertical-align:-1px;
+    border:2px solid rgba(0,0,0,0.25); border-top-color:currentColor; animation:spin .7s linear infinite; }
+  @keyframes cta-pulse{ 0%{ box-shadow:0 0 0 0 rgba(255,255,255,0.45); } 70%{ box-shadow:0 0 0 10px rgba(255,255,255,0); } 100%{ box-shadow:0 0 0 0 rgba(255,255,255,0); } }
+  button.primary.hint{ animation:cta-pulse 1.8s ease-out infinite; }
+  @media (prefers-reduced-motion: reduce){ button.primary.hint{ animation:none; } }
+
+  /* ---------- toasts ---------- */
+  .toast-container{ position:fixed; right:18px; bottom:18px; z-index:200; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
+  .toast{ pointer-events:auto; background:var(--panel-2); border:1px solid var(--line-2); border-radius:10px;
+    padding:11px 16px; font-size:12.5px; color:var(--t-1); font-family:var(--sans); max-width:320px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.45); opacity:0; transform:translateY(8px);
+    transition:opacity .25s ease, transform .25s ease; }
+  .toast.in{ opacity:1; transform:translateY(0); }
+  .toast.success{ border-color:rgba(255,255,255,0.4); }
+  .toast.error{ border-color:rgba(255,255,255,0.4); }
+  .toast.success::before{ content:"✓ "; color:#fff; }
+  .toast.error::before{ content:"⚠ "; color:#fff; }
 
   /* ---------- layout ---------- */
   main{ max-width:1400px; margin:0 auto; padding:26px; display:flex; flex-direction:column; gap:22px; }
@@ -243,6 +268,39 @@
   .wf-foot .stat{ display:flex; gap:18px; }
   .wf-foot .stat b{ color:var(--t-1); font-weight:700; }
 
+  /* ---------- agent decision cards ---------- */
+  .decision-grid{ display:grid; grid-template-columns:1fr auto 1fr; gap:18px; align-items:stretch; }
+  @media (max-width:760px){ .decision-grid{ grid-template-columns:1fr; } }
+  .decision-card{ border:1px solid var(--line-2); border-radius:12px; background:var(--panel-2);
+    padding:16px 16px 14px; display:flex; flex-direction:column; gap:14px; transition:border-color .3s ease; }
+  .decision-card.lit{ border-color:rgba(255,255,255,0.45); }
+  .decision-card-head{ display:flex; align-items:center; gap:10px; }
+  .decision-avatar{ width:30px; height:30px; flex-shrink:0; border-radius:8px; border:1px solid var(--line-2);
+    background:#0c0c0e; display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--t-2); }
+  .decision-card.lit .decision-avatar{ color:#fff; border-color:#4a4a53; }
+  .decision-name{ font-size:13.5px; font-weight:700; color:var(--t-1); }
+  .decision-role{ font-size:10.5px; color:var(--t-3); font-family:var(--mono); margin-top:1px; }
+  .decision-badge{ margin-left:auto; font-size:9.5px; font-family:var(--mono); padding:3px 9px; border-radius:999px;
+    border:1px solid var(--line-2); color:var(--t-3); text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; }
+  .decision-badge.risk-high{ border-color:rgba(255,255,255,0.45); color:#fff; }
+  .decision-badge.risk-low{ border-color:var(--line-2); color:var(--t-2); }
+  .decision-badge.decided{ background:#fafafa; color:#0a0a0a; border-color:#fafafa; font-weight:700; }
+  .decision-placeholder{ font-size:12px; color:var(--t-3); font-family:var(--mono); line-height:1.6; }
+  .decision-stat{ display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+    font-size:12.5px; padding:6px 0; border-bottom:1px solid var(--line); }
+  .decision-stat:last-of-type{ border-bottom:none; }
+  .decision-stat span{ color:var(--t-3); font-family:var(--mono); }
+  .decision-stat b{ color:var(--t-1); font-family:var(--mono); font-weight:700; text-align:right; }
+  .decision-stat.gap b{ color:#fff; }
+  .decision-rationale{ font-size:12px; color:var(--t-2); line-height:1.6; margin-top:2px;
+    padding-top:10px; border-top:1px solid var(--line); }
+  .decision-handoff{ display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:5px; color:var(--t-4); flex-shrink:0; transition:color .3s ease; }
+  .decision-handoff.lit{ color:#fff; }
+  .decision-handoff svg{ width:20px; height:20px; }
+  .decision-handoff span{ font-size:9px; font-family:var(--mono); text-transform:uppercase; letter-spacing:1px; }
+  @media (max-width:760px){ .decision-handoff svg{ transform:rotate(90deg); } }
+
   /* ---------- bottom row ---------- */
   .row{ display:grid; grid-template-columns:1fr 1fr; gap:22px; }
   @media (max-width:940px){ .row{ grid-template-columns:1fr; } }
@@ -324,6 +382,13 @@
     <h1 class="hero-title">Hopper</h1>
     <p class="hero-tagline">A supply chain that <b>remembers and reacts.</b> When a live demand spike hits a hub, autonomous agents weigh cost against urgency, reroute the shipment in real time, and write the decision back to graph memory.</p>
     <div class="hero-cta"><a class="enter-btn" href="#dashboard">Enter Dashboard →</a></div>
+    <div class="hero-steps">
+      <div class="hero-step"><b>1</b> Live signal hits a hub</div>
+      <span class="hero-step-arrow">→</span>
+      <div class="hero-step"><b>2</b> Two agents negotiate</div>
+      <span class="hero-step-arrow">→</span>
+      <div class="hero-step"><b>3</b> Decision executes &amp; is remembered</div>
+    </div>
   </div>
   <a class="hero-scroll" href="#dashboard">
     <span>Scroll</span>
@@ -550,6 +615,47 @@
     </div>
   </div>
 
+  <!-- ===================== AGENT NEGOTIATION ===================== -->
+  <div class="panel">
+    <div class="panel-head"><h2>Agent Negotiation</h2><span class="meta">cost vs. urgency, argued out loud</span></div>
+    <div class="panel-body" style="padding:18px;">
+      <div class="decision-grid">
+        <div class="decision-card" id="riskCard">
+          <div class="decision-card-head">
+            <span class="decision-avatar">▲</span>
+            <div>
+              <div class="decision-name">Risk Agent</div>
+              <div class="decision-role">reads the graph, flags the danger</div>
+            </div>
+            <span class="decision-badge" id="riskBadge">waiting</span>
+          </div>
+          <div id="riskBody">
+            <div class="decision-placeholder">Fire the trigger to see the Risk Agent's assessment.</div>
+          </div>
+        </div>
+
+        <div class="decision-handoff" id="decisionHandoff" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>hands off</span>
+        </div>
+
+        <div class="decision-card" id="modeCard">
+          <div class="decision-card-head">
+            <span class="decision-avatar">▲</span>
+            <div>
+              <div class="decision-name">Mode Agent</div>
+              <div class="decision-role">picks the cheapest fix</div>
+            </div>
+            <span class="decision-badge" id="modeBadge">waiting</span>
+          </div>
+          <div id="modeBody">
+            <div class="decision-placeholder">Waiting on the Risk Agent's verdict.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== BOTTOM ROW ===================== -->
   <div class="row">
     <div class="panel">
@@ -638,6 +744,8 @@
   <div class="footer-bottom"><code>POST /api/trigger</code> runs the live pipeline · <code>GET /api/events</code> streams it back</div>
 </footer>
 
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
 <script>
 const MODE_DATA = {
   rail:  { label: 'Rail',  cost: '$2,000', time: '120 hrs' },
@@ -658,6 +766,13 @@ const els = {
   linkOhioLabel: document.getElementById('link-ohio-label'),
   heroBig: document.getElementById('heroBig'),
   heroSmall: document.getElementById('heroSmall'),
+  riskCard: document.getElementById('riskCard'),
+  riskBadge: document.getElementById('riskBadge'),
+  riskBody: document.getElementById('riskBody'),
+  modeCard: document.getElementById('modeCard'),
+  modeBadge: document.getElementById('modeBadge'),
+  modeBody: document.getElementById('modeBody'),
+  decisionHandoff: document.getElementById('decisionHandoff'),
 };
 
 let state = { triggered: false, recommended: null, executed: null };
@@ -796,6 +911,33 @@ function addLog(tag, label, message){
   els.log.scrollTop = els.log.scrollHeight;
 }
 
+function showToast(message, type = 'info'){
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = message;
+  container.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('in'));
+  setTimeout(() => {
+    el.classList.remove('in');
+    setTimeout(() => el.remove(), 300);
+  }, 4500);
+}
+
+function setTriggerButton(mode){
+  if (mode === 'loading') {
+    els.btnTrigger.disabled = true;
+    els.btnTrigger.classList.add('loading');
+    els.btnTrigger.classList.remove('hint');
+    els.btnTrigger.innerHTML = '<span class="btn-spinner"></span>Running…';
+  } else {
+    els.btnTrigger.disabled = false;
+    els.btnTrigger.classList.remove('loading');
+    els.btnTrigger.textContent = 'Fire Trigger';
+  }
+}
+
 function renderCompareTable(){
   const rows = Object.entries(MODE_DATA).map(([key, m]) => {
     const isRec = state.recommended === key;
@@ -857,6 +999,19 @@ function revealEvent(evt){
       break;
     }
     case 'risk-agent': {
+      const p = detail || {};
+      if (p.risk_level) {
+        const hi = p.risk_level === 'high';
+        els.riskCard.classList.add('lit');
+        els.riskBadge.textContent = p.risk_level;
+        els.riskBadge.className = 'decision-badge ' + (hi ? 'risk-high' : 'risk-low');
+        els.riskBody.innerHTML = `
+          <div class="decision-stat"><span>Effective demand</span><b>${p.effective_weekly_demand?.toLocaleString() ?? '—'} units/wk</b></div>
+          <div class="decision-stat"><span>Stock remaining</span><b>${p.days_of_stock_left ?? '—'} days</b></div>
+          <div class="decision-stat"><span>Rail transit</span><b>${p.rail_transit_days ?? '—'} days</b></div>
+          <div class="decision-stat gap"><span>Stockout gap</span><b>${p.stockout_gap_days ?? '—'} days</b></div>`;
+        if (hi) { els.decisionHandoff.classList.add('lit'); }
+      }
       addLog(tag, 'RISK AGENT', label);
       break;
     }
@@ -864,6 +1019,16 @@ function revealEvent(evt){
       const p = detail || {};
       if (p.recommended_mode) state.recommended = p.recommended_mode;
       renderCompareTable();
+      if (p.recommended_mode) {
+        els.modeCard.classList.add('lit');
+        els.modeBadge.textContent = 'decided';
+        els.modeBadge.className = 'decision-badge decided';
+        els.modeBody.innerHTML = `
+          <div class="decision-stat"><span>Recommended</span><b>${p.recommended_mode.toUpperCase()}</b></div>
+          <div class="decision-stat"><span>Cost</span><b>$${p.cost?.toLocaleString() ?? '—'}</b></div>
+          <div class="decision-stat"><span>Transit</span><b>${p.transit_hrs ?? '—'} hrs</b></div>
+          <div class="decision-rationale">${p.rationale ?? ''}</div>`;
+      }
       addLog(tag, 'MODE AGENT', p.rationale || label);
       break;
     }
@@ -882,7 +1047,13 @@ function revealEvent(evt){
     }
     case 'system': {
       addLog(tag, 'SYSTEM', label);
-      if (/complete/i.test(label)) els.btnTrigger.disabled = false;
+      if (/complete/i.test(label)) {
+        setTriggerButton('idle');
+        showToast('Decision executed — written back to FalkorDB.', 'success');
+      } else if (/error/i.test(label)) {
+        setTriggerButton('idle');
+        showToast(label, 'error');
+      }
       break;
     }
   }
@@ -898,11 +1069,21 @@ function resetUI(){
   els.heroBig.textContent = 'Network stable — all lanes on rail';
   els.heroSmall.textContent = 'Fire the LaserData trigger to inject a live demand spike at Ohio.';
   els.comparePanel.innerHTML = '<div id="comparePlaceholder">No active event. Fire the trigger to evaluate transport modes for Ohio.</div>';
+  els.riskCard.classList.remove('lit');
+  els.riskBadge.textContent = 'waiting';
+  els.riskBadge.className = 'decision-badge';
+  els.riskBody.innerHTML = '<div class="decision-placeholder">Fire the trigger to see the Risk Agent\'s assessment.</div>';
+  els.modeCard.classList.remove('lit');
+  els.modeBadge.textContent = 'waiting';
+  els.modeBadge.className = 'decision-badge';
+  els.modeBody.innerHTML = '<div class="decision-placeholder">Waiting on the Risk Agent\'s verdict.</div>';
+  els.decisionHandoff.classList.remove('lit');
+  setTriggerButton('idle');
   resetWorkflow();
 }
 
 async function fireTrigger(){
-  els.btnTrigger.disabled = true;
+  setTriggerButton('loading');
   resetWorkflow(); // clear any stale buffers/animation state from a prior run
   addLog('system', 'SYSTEM', 'Triggering pipeline…');
   try {
@@ -919,8 +1100,16 @@ async function fireTrigger(){
     // every intermediate step in real time, so no further UI work is needed here.
   } catch (e) {
     addLog('system', 'SYSTEM', `Trigger failed — is the API running? (${e.message})`);
-    els.btnTrigger.disabled = false;
+    showToast(`Trigger failed: ${e.message}`, 'error');
+    setTriggerButton('idle');
   }
+}
+
+// First-time visitors get a one-time pulse on the primary CTA so it's obvious
+// what to click; clears itself on the first trigger (see setTriggerButton).
+if (!localStorage.getItem('hopper_visited')) {
+  els.btnTrigger.classList.add('hint');
+  localStorage.setItem('hopper_visited', '1');
 }
 
 els.btnTrigger.addEventListener('click', fireTrigger);
