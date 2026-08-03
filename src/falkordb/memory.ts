@@ -3,7 +3,7 @@
  * so the agent pipeline and RocketRide write-back call the graph the same way.
  */
 import { connect, type Graph } from "./client.js";
-import { QUERY_A, QUERY_B, PRODUCT } from "./schema.js";
+import { QUERY_A, QUERY_B, QUERY_DECISIONS, PRODUCT } from "./schema.js";
 import type { HubContext, ShipmentDecisionRecord } from "../types.js";
 
 /** Query A — pull stock, demand, and modes for a hub as one HubContext row. */
@@ -43,6 +43,23 @@ export async function writeShipmentDecision(
     },
   });
   return (res.data as any[])?.[0];
+}
+
+/** List ShipmentDecisions written back for a hub, newest first (memory compounding). */
+export async function listDecisions(
+  graph: Graph,
+  hub: string
+): Promise<(ShipmentDecisionRecord & { timestamp: number })[]> {
+  const res = await graph.query(QUERY_DECISIONS, { params: { hub } });
+  return ((res.data as any[]) ?? []).map((row) => ({
+    hub: row.hub,
+    product: PRODUCT,
+    mode: row.mode,
+    cost: Number(row.cost),
+    transit_hrs: Number(row.transit_hrs),
+    rationale: row.rationale,
+    timestamp: Number(row.timestamp),
+  }));
 }
 
 /** Convenience: open a connection, run `fn`, always close. */
