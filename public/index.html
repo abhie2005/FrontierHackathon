@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ColdRelief-500 — Live Distribution Pipeline</title>
+<style>
+  :root{
+    --bg: #0a0e14;
+    --panel: #10161f;
+    --panel-2: #141b26;
+    --line: #212c3a;
+    --text: #e7edf3;
+    --text-dim: #7c8a9a;
+    --rail: #3a4756;
+    --alert: #e5484d;
+    --alert-glow: rgba(229,72,77,0.35);
+    --warn: #f2a93b;
+    --ok: #2dd4a7;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--text); font-family:var(--sans);
+    min-height:100vh;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 24px; border-bottom:1px solid var(--line);
+    flex-wrap: wrap; gap:12px;
+  }
+  .title-block h1{ font-size:17px; margin:0; letter-spacing:0.2px; }
+  .title-block .sub{ font-size:12px; color:var(--text-dim); font-family:var(--mono); margin-top:2px;}
+  .status{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); font-family:var(--mono); }
+  .dot{ width:8px; height:8px; border-radius:50%; background:var(--text-dim); }
+  .dot.live{ background:var(--ok); box-shadow:0 0 8px var(--ok); animation:pulse-dot 2s infinite; }
+  .dot.down{ background:var(--alert); }
+  @keyframes pulse-dot{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  .controls{ display:flex; gap:10px; flex-wrap:wrap; }
+  button{
+    font-family:var(--sans); font-size:13px; font-weight:600; cursor:pointer;
+    border-radius:6px; padding:9px 14px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--text); transition:transform .05s ease;
+  }
+  button:active{ transform:scale(0.97); }
+  button.primary{ background:var(--alert); border-color:var(--alert); color:#fff; }
+  button.secondary{ background:var(--ok); border-color:var(--ok); color:#00281f; }
+  button.ghost{ background:transparent; color:var(--text-dim); }
+  button:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  main{ padding:20px 24px; display:flex; flex-direction:column; gap:18px; max-width:1280px; margin:0 auto; }
+  .row{ display:grid; grid-template-columns: 1.3fr 1fr; gap:18px; }
+  @media (max-width: 900px){ .row{ grid-template-columns: 1fr; } }
+
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .panel-head{ padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
+  .panel-head h2{ font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); margin:0; font-weight:600; }
+  .panel-body{ padding:14px 16px; }
+
+  /* ---- Panel 1: network diagram ---- */
+  svg { width:100%; height:auto; display:block; }
+  .hub-label{ font-size:13px; fill:var(--text); font-family:var(--sans); font-weight:600; }
+  .hub-stock{ font-size:11px; fill:var(--text-dim); font-family:var(--mono); }
+  .link-label{ font-size:10px; fill:var(--text-dim); font-family:var(--mono); letter-spacing:0.5px; }
+  .node-circle{ fill:var(--panel-2); stroke:var(--rail); stroke-width:2; transition: all .3s ease; }
+  .node-circle.alert{ fill:var(--alert); stroke:var(--alert); animation: pulse-node 1.4s ease-out infinite; }
+  @keyframes pulse-node{
+    0%{ filter:drop-shadow(0 0 0px var(--alert-glow)); }
+    50%{ filter:drop-shadow(0 0 14px var(--alert-glow)); }
+    100%{ filter:drop-shadow(0 0 0px var(--alert-glow)); }
+  }
+  .warehouse-circle{ fill:var(--panel-2); stroke:var(--ok); stroke-width:2; }
+  .link{ stroke:var(--rail); stroke-width:2; fill:none; transition: all .3s ease; }
+  .link.truck{ stroke:var(--warn); stroke-width:3; stroke-dasharray:6 4; animation:dash 1s linear infinite; }
+  @keyframes dash{ to{ stroke-dashoffset:-20; } }
+  .demand-badge{ font-size:11px; font-weight:700; fill:var(--alert); font-family:var(--mono); }
+
+  /* ---- Panel 2: comparison table ---- */
+  #comparePlaceholder{ color:var(--text-dim); font-size:13px; font-family:var(--mono); }
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th, td{ text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); }
+  th{ color:var(--text-dim); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; }
+  tr.recommended td{ background:rgba(45,212,167,0.08); }
+  tr.recommended td:first-child{ border-left:3px solid var(--ok); padding-left:8px; }
+  .badge{ display:inline-block; font-size:10px; font-family:var(--mono); padding:2px 6px; border-radius:4px; margin-left:6px; }
+  .badge.rec{ background:rgba(45,212,167,0.15); color:var(--ok); }
+  .badge.exec{ background:rgba(45,212,167,0.25); color:var(--ok); font-weight:700; }
+  .alert-line{ font-size:13px; color:var(--alert); font-family:var(--mono); margin-bottom:10px; }
+
+  /* ---- Panel 3: log ---- */
+  #log{ height:230px; overflow-y:auto; font-family:var(--mono); font-size:12.5px; display:flex; flex-direction:column; gap:6px; }
+  .log-entry{ display:flex; gap:8px; align-items:baseline; padding:5px 8px; border-radius:5px; background:var(--panel-2); }
+  .log-entry .ts{ color:var(--text-dim); flex-shrink:0; }
+  .log-entry .tag{ flex-shrink:0; font-weight:700; padding:1px 6px; border-radius:4px; font-size:11px; }
+  .tag.laserdata{ background:rgba(229,72,77,0.15); color:var(--alert); }
+  .tag.risk_agent{ background:rgba(242,169,59,0.15); color:var(--warn); }
+  .tag.mode_agent{ background:rgba(90,160,255,0.15); color:#5aa0ff; }
+  .tag.rocketride{ background:rgba(45,212,167,0.15); color:var(--ok); }
+  .tag.system{ background:rgba(124,138,154,0.15); color:var(--text-dim); }
+  .log-entry .msg{ color:var(--text); }
+  #log:empty::after{ content:"Waiting for pipeline activity…"; color:var(--text-dim); }
+
+  footer{ text-align:center; color:var(--text-dim); font-size:11px; font-family:var(--mono); padding:20px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-block">
+    <h1>ColdRelief-500 — Live Distribution Pipeline</h1>
+    <div class="sub">LA Warehouse → Ohio / Texas / New Jersey · LaserData → Risk Agent → Mode Agent → RocketRide</div>
+  </div>
+  <div class="status">
+    <span class="dot" id="connDot"></span>
+    <span id="connText">connecting…</span>
+  </div>
+  <div class="controls">
+    <button class="primary" id="btnTrigger">🔥 Fire Trigger (LaserData)</button>
+    <button class="secondary" id="btnSimulate" disabled>▶ Simulate Agents</button>
+    <button class="ghost" id="btnReset">↺ Reset</button>
+  </div>
+</header>
+
+<main>
+  <div class="row">
+    <div class="panel">
+      <div class="panel-head"><h2>Network — Distribution Map</h2></div>
+      <div class="panel-body">
+        <svg viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg">
+          <!-- links (drawn first, under nodes) -->
+          <line id="link-ohio" class="link" x1="140" y1="170" x2="400" y2="70"/>
+          <line id="link-texas" class="link" x1="140" y1="170" x2="400" y2="170"/>
+          <line id="link-nj" class="link" x1="140" y1="170" x2="400" y2="270"/>
+
+          <text id="link-ohio-label" class="link-label" x="255" y="110">RAIL</text>
+          <text class="link-label" x="255" y="160">RAIL</text>
+          <text class="link-label" x="255" y="235">RAIL</text>
+
+          <!-- LA warehouse -->
+          <circle class="warehouse-circle" cx="110" cy="170" r="34"/>
+          <text class="hub-label" x="110" y="175" text-anchor="middle">LA</text>
+          <text class="hub-stock" x="110" y="222" text-anchor="middle">Central Warehouse</text>
+
+          <!-- Ohio -->
+          <circle id="node-ohio" class="node-circle" cx="430" cy="70" r="28"/>
+          <text class="hub-label" x="430" y="75" text-anchor="middle">OH</text>
+          <text class="hub-stock" id="stock-ohio" x="430" y="112" text-anchor="middle">Stock: 1,200 units</text>
+          <text class="demand-badge" id="demand-ohio" x="430" y="38" text-anchor="middle" opacity="0"></text>
+
+          <!-- Texas -->
+          <circle class="node-circle" cx="430" cy="170" r="28"/>
+          <text class="hub-label" x="430" y="175" text-anchor="middle">TX</text>
+          <text class="hub-stock" x="430" y="212" text-anchor="middle">Stock: 900 units</text>
+
+          <!-- New Jersey -->
+          <circle class="node-circle" cx="430" cy="270" r="28"/>
+          <text class="hub-label" x="430" y="275" text-anchor="middle">NJ</text>
+          <text class="hub-stock" x="430" y="312" text-anchor="middle">Stock: 850 units</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Mode Decision — Ohio Shipment</h2></div>
+      <div class="panel-body" id="comparePanel">
+        <div id="comparePlaceholder">No active event. Fire the trigger to evaluate transport modes for Ohio.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2>Live Pipeline Log</h2></div>
+    <div class="panel-body">
+      <div id="log"></div>
+    </div>
+  </div>
+</main>
+
+<footer>POST JSON to <code>/event</code> — types: trigger · risk_agent · mode_agent · rocketride · reset</footer>
+
+<script>
+const MODE_DATA = {
+  rail:  { label: 'Rail',  cost: '$0.18 / unit', time: '4–5 days' },
+  truck: { label: 'Truck', cost: '$0.45 / unit', time: '1–2 days' },
+  air:   { label: 'Air',   cost: '$1.20 / unit', time: '< 24 hrs' },
+};
+
+const els = {
+  connDot: document.getElementById('connDot'),
+  connText: document.getElementById('connText'),
+  btnTrigger: document.getElementById('btnTrigger'),
+  btnSimulate: document.getElementById('btnSimulate'),
+  btnReset: document.getElementById('btnReset'),
+  comparePanel: document.getElementById('comparePanel'),
+  log: document.getElementById('log'),
+  nodeOhio: document.getElementById('node-ohio'),
+  demandOhio: document.getElementById('demand-ohio'),
+  linkOhio: document.getElementById('link-ohio'),
+  linkOhioLabel: document.getElementById('link-ohio-label'),
+};
+
+let state = { triggered: false, recommended: null, executed: null };
+
+function nowStamp(){
+  const d = new Date();
+  return d.toTimeString().slice(0,8);
+}
+
+function addLog(tag, label, message){
+  const row = document.createElement('div');
+  row.className = 'log-entry';
+  row.innerHTML = `<span class="ts">${nowStamp()}</span><span class="tag ${tag}">${label}</span><span class="msg"></span>`;
+  row.querySelector('.msg').textContent = message;
+  els.log.appendChild(row);
+  els.log.scrollTop = els.log.scrollHeight;
+}
+
+function renderCompareTable(){
+  const rows = Object.entries(MODE_DATA).map(([key, m]) => {
+    const isRec = state.recommended === key;
+    const isExec = state.executed === key;
+    let badges = '';
+    if (isRec) badges += `<span class="badge rec">recommended</span>`;
+    if (isExec) badges += `<span class="badge exec">executed ✓</span>`;
+    return `<tr class="${isRec ? 'recommended' : ''}">
+      <td>${m.label}${badges}</td>
+      <td>${m.cost}</td>
+      <td>${m.time}</td>
+    </tr>`;
+  }).join('');
+
+  els.comparePanel.innerHTML = `
+    <div class="alert-line">⚠ Ohio demand spiking — evaluating transport modes</div>
+    <table>
+      <thead><tr><th>Mode</th><th>Cost</th><th>Transit time</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function handleEvent(msg){
+  switch(msg.type){
+    case 'trigger': {
+      const p = msg.payload || {};
+      state.triggered = true;
+      els.nodeOhio.classList.add('alert');
+      els.demandOhio.textContent = `×${p.demand_multiplier || '?'} demand`;
+      els.demandOhio.setAttribute('opacity', '1');
+      renderCompareTable();
+      els.btnSimulate.disabled = false;
+      addLog('laserdata', 'LASERDATA', `Live event received: ${p.event || 'unknown'} — hub=${p.hub}, product=${p.product}, demand_multiplier=${p.demand_multiplier}`);
+      break;
+    }
+    case 'risk_agent': {
+      const p = msg.payload || {};
+      addLog('risk_agent', 'RISK AGENT', p.message || 'Risk assessment received.');
+      break;
+    }
+    case 'mode_agent': {
+      const p = msg.payload || {};
+      if (p.recommended_mode) state.recommended = p.recommended_mode;
+      renderCompareTable();
+      addLog('mode_agent', 'MODE AGENT', p.message || `Recommended mode: ${p.recommended_mode}`);
+      break;
+    }
+    case 'rocketride': {
+      const p = msg.payload || {};
+      state.executed = state.recommended || 'truck';
+      renderCompareTable();
+      els.linkOhio.classList.add('truck');
+      els.linkOhioLabel.textContent = (MODE_DATA[state.executed]?.label || 'TRUCK').toUpperCase();
+      addLog('rocketride', 'ROCKETRIDE', p.message || `Shipment executed. Confirmation: ${p.confirmation_id || 'n/a'}`);
+      break;
+    }
+    case 'reset': {
+      resetUI();
+      addLog('system', 'SYSTEM', 'Pipeline reset to baseline.');
+      break;
+    }
+  }
+}
+
+function resetUI(){
+  state = { triggered: false, recommended: null, executed: null };
+  els.nodeOhio.classList.remove('alert');
+  els.demandOhio.setAttribute('opacity', '0');
+  els.linkOhio.classList.remove('truck');
+  els.linkOhioLabel.textContent = 'RAIL';
+  els.comparePanel.innerHTML = '<div id="comparePlaceholder">No active event. Fire the trigger to evaluate transport modes for Ohio.</div>';
+  els.btnSimulate.disabled = true;
+}
+
+async function postEvent(payload){
+  try {
+    await fetch('/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    addLog('system', 'SYSTEM', `Failed to send event — is server.js running? (${e.message})`);
+  }
+}
+
+els.btnTrigger.addEventListener('click', () => {
+  postEvent({
+    type: 'trigger',
+    payload: { event: 'flu_outbreak', hub: 'Ohio', product: 'ColdRelief-500', demand_multiplier: 3.2 },
+  });
+});
+
+els.btnReset.addEventListener('click', () => postEvent({ type: 'reset' }));
+
+// Fallback/safety-net path: plays the rest of the pipeline automatically
+// if Person 1 / Person 2's real agents aren't posting live yet.
+// Uses the exact same /event endpoint, so real and simulated messages
+// are handled by identical code on the UI side.
+els.btnSimulate.addEventListener('click', () => {
+  els.btnSimulate.disabled = true;
+  setTimeout(() => postEvent({
+    type: 'risk_agent',
+    payload: { message: 'Ohio inventory covers ~1.4 days at 3.2x demand — projected stockout in under 48 hours.', stockout_hours: 34 },
+  }), 900);
+
+  setTimeout(() => postEvent({
+    type: 'mode_agent',
+    payload: { message: 'Rail transit (4–5 days) exceeds the stockout window. Truck is the fastest option that still clears the cost ceiling — recommending truck.', recommended_mode: 'truck' },
+  }), 2200);
+
+  setTimeout(() => postEvent({
+    type: 'rocketride',
+    payload: { message: 'Truck dispatched from LA warehouse via RocketRide. ETA to Ohio hub: 30 hours.', confirmation_id: 'RR-48213', eta_hours: 30 },
+  }), 3600);
+});
+
+// --- SSE connection ---
+function connect(){
+  const es = new EventSource('/events');
+  es.onopen = () => {
+    els.connDot.className = 'dot live';
+    els.connText.textContent = 'live';
+  };
+  es.onerror = () => {
+    els.connDot.className = 'dot down';
+    els.connText.textContent = 'reconnecting…';
+  };
+  es.onmessage = (e) => {
+    try { handleEvent(JSON.parse(e.data)); }
+    catch(err){ console.error('bad event', err); }
+  };
+}
+connect();
+</script>
+</body>
+</html>
