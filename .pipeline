@@ -1,0 +1,79 @@
+{
+  "project_id": "memory-meets-motion",
+  "version": 1,
+  "description": "Adaptive Mode Selection Network pipeline integrating LaserData, FalkorDB, Guild.ai, and RocketRide.",
+  "source": "laserdata_trigger",
+  "components": [
+    {
+      "id": "laserdata_trigger",
+      "name": "LaserData Outbreak Signal",
+      "provider": "webhook",
+      "description": "Ingests live flu-outbreak signals (demand multiplier spike) for regional hubs",
+      "config": {
+        "path": "/event",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "falkordb_context_pull",
+      "name": "FalkorDB Context Pull (Query A)",
+      "provider": "database_query",
+      "description": "Retrieves baseline stock and transport mode options for the target hub",
+      "config": {
+        "query": "MATCH (p:Product {name: $product})-[:STOCKED_AT]->(h:Hub {name: $hub}) MATCH (p)-[:HAS_DEMAND_HISTORY]->(d:DemandSignal {hub: $hub}) MATCH (h)-[:HAS_MODE]->(m:TransportMode) RETURN h.name AS hub, d.avg_weekly_units AS avg_demand, collect({mode: m.mode, cost: m.cost, transit_hrs: m.transit_hrs}) AS modes"
+      },
+      "input": [
+        {
+          "lane": "trigger_payload",
+          "from": "laserdata_trigger"
+        }
+      ]
+    },
+    {
+      "id": "guild_negotiation",
+      "name": "Guild.ai Negotiation (Risk & Mode Agents)",
+      "provider": "multi_agent_coordinator",
+      "description": "Coordinates negotiation between Risk Agent (cost-vs-urgency) and Mode Agent (mode recommendation)",
+      "config": {
+        "agents": ["risk-agent", "mode-agent"],
+        "strategy": "threshold-negotiation"
+      },
+      "input": [
+        {
+          "lane": "context_data",
+          "from": "falkordb_context_pull"
+        }
+      ]
+    },
+    {
+      "id": "rocketride_execution",
+      "name": "RocketRide Switch Execution",
+      "provider": "tool_execution",
+      "description": "Executes the recommended transport mode switch and triggers FalkorDB write-back",
+      "config": {
+        "tool_name": "execute_mode_selection"
+      },
+      "input": [
+        {
+          "lane": "recommended_decision",
+          "from": "guild_negotiation"
+        }
+      ]
+    },
+    {
+      "id": "falkordb_writeback",
+      "name": "FalkorDB Writeback (Query B)",
+      "provider": "database_write",
+      "description": "Persists the executed shipment decision record back into the graph memory",
+      "config": {
+        "query": "MATCH (h:Hub {name: $hub})-[:HAS_MODE]->(m:TransportMode {mode: $chosen_mode}) CREATE (s:ShipmentDecision {hub: $hub, product: $product, mode: $chosen_mode, cost: m.cost, transit_hrs: m.transit_hrs, rationale: $rationale, timestamp: timestamp()}) CREATE (h)-[:HAD_DECISION]->(s) RETURN s"
+      },
+      "input": [
+        {
+          "lane": "execution_result",
+          "from": "rocketride_execution"
+        }
+      ]
+    }
+  ]
+}
