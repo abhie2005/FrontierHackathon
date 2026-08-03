@@ -276,7 +276,6 @@
     <div class="status"><span class="dot" id="connDot"></span><span id="connText">connecting…</span></div>
     <div class="controls">
       <button class="primary" id="btnTrigger">Fire Trigger</button>
-      <button id="btnSimulate" disabled>Run Agents</button>
       <button class="ghost" id="btnReset">Reset</button>
     </div>
   </div>
@@ -440,7 +439,7 @@
   </div>
 </main>
 
-<footer>Hopper · POST JSON to <code>/event</code> — types: trigger · risk_agent · mode_agent · rocketride · reset</footer>
+<footer>Hopper · <code>POST /api/trigger</code> runs the live pipeline · <code>GET /api/events</code> streams it back</footer>
 
 <script>
 const MODE_DATA = {
@@ -453,7 +452,6 @@ const els = {
   connDot: document.getElementById('connDot'),
   connText: document.getElementById('connText'),
   btnTrigger: document.getElementById('btnTrigger'),
-  btnSimulate: document.getElementById('btnSimulate'),
   btnReset: document.getElementById('btnReset'),
   comparePanel: document.getElementById('comparePanel'),
   log: document.getElementById('log'),
@@ -500,50 +498,79 @@ function renderCompareTable(){
     <tbody>${rows}</tbody></table>`;
 }
 
-function handleEvent(msg){
-  switch(msg.type){
-    case 'trigger': {
-      const p = msg.payload || {};
+// Maps the API's PipelineEvent { source, label, detail, ts } onto the UI.
+function handleEvent(evt){
+  const { source, label, detail } = evt;
+  const tag = source; // reuse source as the log tag/CSS class
+
+  switch(source){
+    case 'laserdata': {
+      const p = detail || {};
       state.triggered = true;
       els.nodeOhio.classList.add('alert');
       els.demandOhio.textContent = `×${p.demand_multiplier || '?'} demand`;
       els.demandOhio.setAttribute('opacity', '1');
-      els.heroBig.textContent = 'Demand spike detected at Ohio';
-      els.heroSmall.textContent = `flu_outbreak · ×${p.demand_multiplier} demand · evaluating rail vs. faster modes`;
+      els.heroBig.textContent = `Demand spike detected at ${p.hub || 'Ohio'}`;
+      els.heroSmall.textContent = `${p.event || 'flu_outbreak'} · ×${p.demand_multiplier} demand · evaluating rail vs. faster modes`;
       renderCompareTable();
-      stageDone('laserdata'); stageActive('falkordb'); litConn(1, true);
-      els.btnSimulate.disabled = false;
-      addLog('laserdata', 'LASERDATA', `Live event: ${p.event || 'unknown'} — hub=${p.hub}, product=${p.product}, demand_multiplier=${p.demand_multiplier}`);
+      stageActive('laserdata'); litConn(1, false);
+      addLog(tag, 'LASERDATA', label);
       break;
     }
-    case 'risk_agent': {
-      const p = msg.payload || {};
-      stageDone('falkordb'); stageDone('risk'); stageActive('mode'); litConn(2, true); litConn(3, true);
-      addLog('risk_agent', 'RISK AGENT', p.message || 'Risk assessment received.');
+    case 'falkordb': {
+      // Query A (context pull) fires early; write-back fires after RocketRide.
+      if (/^Query A/.test(label)) {
+        if (detail?.available_modes) {
+          detail.available_modes.forEach((m) => {
+            if (MODE_DATA[m.mode]) MODE_DATA[m.mode] = { label: MODE_DATA[m.mode].label, cost: `$${m.cost.toLocaleString()}`, time: `${m.transit_hrs} hrs` };
+          });
+          renderCompareTable();
+        }
+        stageDone('laserdata'); stageActive('falkordb'); litConn(1, true);
+      } else {
+        // write-back — memory compounded.
+        stageDone('falkordb');
+      }
+      addLog(tag, 'FALKORDB', label);
       break;
     }
-    case 'mode_agent': {
-      const p = msg.payload || {};
+    case 'guild': {
+      stageDone('falkordb'); stageActive('risk'); litConn(2, true);
+      addLog(tag, 'GUILD', label);
+      break;
+    }
+    case 'risk-agent': {
+      stageDone('risk'); stageActive('mode'); litConn(3, true);
+      addLog(tag, 'RISK AGENT', label);
+      break;
+    }
+    case 'mode-agent': {
+      const p = detail || {};
       if (p.recommended_mode) state.recommended = p.recommended_mode;
       renderCompareTable();
       stageDone('mode'); stageActive('rocketride'); litConn(4, true);
-      addLog('mode_agent', 'MODE AGENT', p.message || `Recommended mode: ${p.recommended_mode}`);
+      addLog(tag, 'MODE AGENT', p.rationale || label);
       break;
     }
     case 'rocketride': {
-      const p = msg.payload || {};
-      state.executed = state.recommended || 'truck';
-      renderCompareTable();
-      els.linkOhio.classList.add('truck');
-      els.linkOhioLabel.classList.add('truck-label');
-      els.linkOhioLabel.textContent = (MODE_DATA[state.executed]?.label || 'TRUCK').toUpperCase();
-      els.heroBig.textContent = `Ohio switched to ${(MODE_DATA[state.executed]?.label || 'Truck')}`;
-      els.heroSmall.textContent = 'RocketRide executed the mode switch — decision written back to FalkorDB.';
-      stageDone('rocketride');
-      addLog('rocketride', 'ROCKETRIDE', p.message || `Shipment executed. Confirmation: ${p.confirmation_id || 'n/a'}`);
+      if (/^EXECUTED:/.test(label)) {
+        state.executed = state.recommended || 'truck';
+        renderCompareTable();
+        els.linkOhio.classList.add('truck');
+        els.linkOhioLabel.classList.add('truck-label');
+        els.linkOhioLabel.textContent = (MODE_DATA[state.executed]?.label || 'TRUCK').toUpperCase();
+        els.heroBig.textContent = `Ohio switched to ${(MODE_DATA[state.executed]?.label || 'Truck')}`;
+        els.heroSmall.textContent = 'RocketRide executed the mode switch — decision written back to FalkorDB.';
+        stageDone('rocketride');
+      }
+      addLog(tag, 'ROCKETRIDE', label);
       break;
     }
-    case 'reset': { resetUI(); addLog('system', 'SYSTEM', 'Pipeline reset to baseline.'); break; }
+    case 'system': {
+      addLog(tag, 'SYSTEM', label);
+      if (/complete/i.test(label)) els.btnTrigger.disabled = false;
+      break;
+    }
   }
 }
 
@@ -562,29 +589,33 @@ function resetUI(){
   els.btnSimulate.disabled = true;
 }
 
-async function postEvent(payload){
+async function fireTrigger(){
+  els.btnTrigger.disabled = true;
+  addLog('system', 'SYSTEM', 'Triggering pipeline…');
   try {
-    await fetch('/event', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-  } catch (e) { addLog('system', 'SYSTEM', `Failed to send event — is the server running? (${e.message})`); }
+    const res = await fetch('/api/trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'flu_outbreak', hub: 'Ohio', product: 'ColdRelief-500', demand_multiplier: 3.2 }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${res.status}`);
+    }
+    // Response carries the final decision; the SSE stream already rendered
+    // every intermediate step in real time, so no further UI work is needed here.
+  } catch (e) {
+    addLog('system', 'SYSTEM', `Trigger failed — is the API running? (${e.message})`);
+    els.btnTrigger.disabled = false;
+  }
 }
 
-els.btnTrigger.addEventListener('click', () => postEvent({
-  type: 'trigger',
-  payload: { event: 'flu_outbreak', hub: 'Ohio', product: 'ColdRelief-500', demand_multiplier: 3.2 },
-}));
-els.btnReset.addEventListener('click', () => postEvent({ type: 'reset' }));
+els.btnTrigger.addEventListener('click', fireTrigger);
+els.btnReset.addEventListener('click', () => { resetUI(); addLog('system', 'SYSTEM', 'UI reset to baseline (backend memory in FalkorDB is unaffected).'); });
 
-// Safety-net: replays the rest of the pipeline if the real agents aren't posting yet.
-els.btnSimulate.addEventListener('click', () => {
-  els.btnSimulate.disabled = true;
-  setTimeout(() => postEvent({ type:'risk_agent', payload:{ message:'Ohio covers ~2.97 days at 3.2x demand — rail (5 days) arrives too late, 2.03-day stockout gap.' } }), 800);
-  setTimeout(() => postEvent({ type:'mode_agent', payload:{ message:'Truck (48 hrs, $4,500) is the cheapest mode that closes the gap — recommending truck.', recommended_mode:'truck' } }), 2000);
-  setTimeout(() => postEvent({ type:'rocketride', payload:{ message:'Truck dispatched from LA via RocketRide. Decision written back to FalkorDB.', confirmation_id:'RR-48213' } }), 3400);
-});
-
-// --- SSE ---
+// --- SSE: live pipeline events from the real API ---
 function connect(){
-  const es = new EventSource('/events');
+  const es = new EventSource('/api/events');
   es.onopen = () => { els.connDot.className = 'dot live'; els.connText.textContent = 'live'; };
   es.onerror = () => { els.connDot.className = 'dot down'; els.connText.textContent = 'reconnecting…'; };
   es.onmessage = (e) => { try { handleEvent(JSON.parse(e.data)); } catch(err){ console.error('bad event', err); } };
