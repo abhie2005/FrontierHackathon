@@ -16,9 +16,12 @@
     "ui": "node server.cjs",
     "server": "tsx src/server.ts",
     "start": "tsx src/server.ts",
+    "laser:listen": "tsx src/laserdata/listen.ts",
+    "laser:fire": "tsx src/laserdata/fire.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@laserdata/laser-sdk": "^0.0.1",
     "express": "^4.21.2",
     "falkordb": "^6.7.0",
     "rocketride": "^1.3.0",
