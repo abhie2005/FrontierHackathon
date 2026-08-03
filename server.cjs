@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 let clients = [];       // open SSE response objects
-let lastTrigger = null; // last trigger payload, replayed to late-joining clients (e.g. Person 1/2's dashboards)
+let eventLog = [];      // all events since the last reset, replayed to late-joining clients so a fresh page load shows the full populated demo state
 
 function sendEvent(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -45,7 +45,7 @@ const server = http.createServer((req, res) => {
     });
     res.write('\n');
     clients.push(res);
-    if (lastTrigger) sendEvent(res, lastTrigger); // catch up late joiners
+    eventLog.forEach((e) => sendEvent(res, e)); // catch up late joiners with the full history
     req.on('close', () => {
       clients = clients.filter((c) => c !== res);
     });
@@ -71,8 +71,8 @@ const server = http.createServer((req, res) => {
         return;
       }
       msg.ts = Date.now();
-      if (msg.type === 'trigger') lastTrigger = msg;
-      if (msg.type === 'reset') lastTrigger = null;
+      if (msg.type === 'reset') eventLog = [];
+      else eventLog.push(msg);
 
       broadcast(msg);
       res.writeHead(200, { 'Content-Type': 'application/json' });

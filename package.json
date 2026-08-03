@@ -11,6 +11,8 @@
     "query": "tsx src/falkordb/demo-query.ts",
     "agents": "tsx src/agents/pipeline.ts",
     "pipeline": "tsx src/run.ts",
+    "demo": "tsx src/run-demo.ts",
+    "ui": "node server.cjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

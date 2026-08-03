@@ -3,188 +3,450 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ColdRelief-500 — Live Distribution Pipeline</title>
+<title>Hopper — Adaptive Distribution Network</title>
 <style>
   :root{
-    --bg: #0a0e14;
-    --panel: #10161f;
-    --panel-2: #141b26;
-    --line: #212c3a;
-    --text: #e7edf3;
-    --text-dim: #7c8a9a;
-    --rail: #3a4756;
-    --alert: #e5484d;
-    --alert-glow: rgba(229,72,77,0.35);
-    --warn: #f2a93b;
-    --ok: #2dd4a7;
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --bg:      #060607;
+    --bg-2:    #0a0a0c;
+    --panel:   #0d0d0f;
+    --panel-2: #121216;
+    --line:    #1c1c21;
+    --line-2:  #2a2a31;
+    --white:   #f4f4f5;
+    --t-1:     #e4e4e7;   /* primary text */
+    --t-2:     #9a9aa4;   /* secondary */
+    --t-3:     #62626b;   /* faint */
+    --t-4:     #3a3a41;   /* ghost */
+    --mono: ui-monospace, "SF Mono", "Geist Mono", Menlo, Consolas, monospace;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
-  *{ box-sizing: border-box; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
   body{
-    margin:0; background:var(--bg); color:var(--text); font-family:var(--sans);
-    min-height:100vh;
+    background:#050506;
+    color:var(--t-1); font-family:var(--sans); min-height:100vh;
+    -webkit-font-smoothing:antialiased; letter-spacing:0.1px;
   }
+  ::selection{ background:rgba(255,255,255,0.16); }
+  html{ scroll-behavior:smooth; }
+
+  /* fixed "universe" starfield behind the entire site */
+  #bgCanvas{ position:fixed; inset:0; width:100vw; height:100vh; z-index:0; display:block; pointer-events:none; }
+  header, .hero-section, main, footer{ position:relative; z-index:1; }
+
+  /* ---------- hero ---------- */
+  .hero-section{ position:relative; width:100%; height:80vh; min-height:560px; overflow:hidden;
+    background:transparent; display:flex; align-items:center; justify-content:center;
+    cursor:crosshair; padding-top:56px; }
+  .hero-vignette{ position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:radial-gradient(120% 92% at 50% 46%, transparent 46%, rgba(5,5,6,0.62) 100%); }
+  .hero-inner{ position:relative; z-index:2; text-align:center; padding:0 24px; pointer-events:none; max-width:1000px; }
+  .hero-badge{ display:inline-block; margin-bottom:30px; padding:7px 15px; border:1px solid rgba(255,255,255,0.18);
+    border-radius:999px; font-family:var(--mono); font-size:11px; letter-spacing:3px; text-transform:uppercase;
+    color:var(--t-2); background:rgba(255,255,255,0.04); backdrop-filter:blur(4px); }
+  .hero-title{ margin:0; font-weight:800; letter-spacing:-0.05em; line-height:0.88;
+    font-size:clamp(76px, 17vw, 230px);
+    background:linear-gradient(180deg,#ffffff 0%, #6f6f78 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero-tagline{ margin:28px auto 0; max-width:660px; font-size:clamp(15px,1.55vw,20px); line-height:1.65;
+    color:var(--t-2); font-weight:400; }
+  .hero-tagline b{ color:var(--t-1); font-weight:600; }
+  .hero-cta{ margin-top:40px; pointer-events:auto; }
+  a.enter-btn{ display:inline-flex; align-items:center; gap:9px; text-decoration:none;
+    background:#fafafa; color:#0a0a0a; font-weight:700; font-size:14px; padding:14px 26px; border-radius:999px;
+    transition:transform .12s ease, box-shadow .25s; box-shadow:0 0 0 0 rgba(255,255,255,0.2); }
+  a.enter-btn:hover{ transform:translateY(-1px) scale(1.02); box-shadow:0 10px 34px rgba(255,255,255,0.14); }
+  .hero-scroll{ position:absolute; bottom:26px; left:50%; transform:translateX(-50%); z-index:2;
+    display:flex; flex-direction:column; align-items:center; gap:7px; color:var(--t-3); text-decoration:none;
+    font-family:var(--mono); font-size:10px; letter-spacing:2.5px; text-transform:uppercase; }
+  .hero-scroll .chev{ width:18px; height:18px; animation:bob 1.8s ease-in-out infinite; }
+  @keyframes bob{ 0%,100%{ transform:translateY(0); opacity:.5; } 50%{ transform:translateY(5px); opacity:1; } }
+  .hero-stats{ position:absolute; bottom:16px; right:18px; z-index:2; text-align:right; pointer-events:none;
+    font-family:var(--mono); font-size:10px; color:rgba(255,255,255,0.16); line-height:1.5; }
+
+  /* ---------- fixed site navbar ---------- */
   header{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:16px 24px; border-bottom:1px solid var(--line);
-    flex-wrap: wrap; gap:12px;
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:12px 26px; border-bottom:1px solid var(--line);
+    background:rgba(6,6,7,0.55); backdrop-filter:blur(16px) saturate(1.2); flex-wrap:wrap;
   }
-  .title-block h1{ font-size:17px; margin:0; letter-spacing:0.2px; }
-  .title-block .sub{ font-size:12px; color:var(--text-dim); font-family:var(--mono); margin-top:2px;}
-  .status{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); font-family:var(--mono); }
-  .dot{ width:8px; height:8px; border-radius:50%; background:var(--text-dim); }
-  .dot.live{ background:var(--ok); box-shadow:0 0 8px var(--ok); animation:pulse-dot 2s infinite; }
-  .dot.down{ background:var(--alert); }
-  @keyframes pulse-dot{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .logo{
+    width:30px; height:30px; border-radius:8px; border:1px solid var(--line-2);
+    background:linear-gradient(160deg,#1a1a1f,#0c0c0e);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .logo svg{ width:16px; height:16px; }
+  .brand .name{ font-size:18px; font-weight:800; letter-spacing:-0.4px; }
+  .brand .name b{ color:#fff; }
+  .brand .tag{ font-size:11px; color:var(--t-3); font-family:var(--mono); margin-top:1px; letter-spacing:0.3px; }
 
-  .controls{ display:flex; gap:10px; flex-wrap:wrap; }
+  .bar-right{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  .status{ display:flex; align-items:center; gap:7px; font-size:11px; color:var(--t-2);
+    font-family:var(--mono); text-transform:uppercase; letter-spacing:1px; }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--t-3); }
+  .dot.live{ background:#fff; box-shadow:0 0 0 0 rgba(255,255,255,0.5); animation:beacon 2s infinite; }
+  .dot.down{ background:var(--t-4); }
+  @keyframes beacon{ 0%{box-shadow:0 0 0 0 rgba(255,255,255,0.45);} 70%{box-shadow:0 0 0 6px rgba(255,255,255,0);} 100%{box-shadow:0 0 0 0 rgba(255,255,255,0);} }
+
+  .controls{ display:flex; gap:8px; flex-wrap:wrap; }
   button{
-    font-family:var(--sans); font-size:13px; font-weight:600; cursor:pointer;
-    border-radius:6px; padding:9px 14px; border:1px solid var(--line);
-    background:var(--panel-2); color:var(--text); transition:transform .05s ease;
+    font-family:var(--sans); font-size:12.5px; font-weight:600; cursor:pointer;
+    border-radius:8px; padding:9px 15px; border:1px solid var(--line-2);
+    background:var(--panel-2); color:var(--t-1);
+    transition:transform .06s ease, background .15s ease, border-color .15s ease, opacity .15s;
   }
-  button:active{ transform:scale(0.97); }
-  button.primary{ background:var(--alert); border-color:var(--alert); color:#fff; }
-  button.secondary{ background:var(--ok); border-color:var(--ok); color:#00281f; }
-  button.ghost{ background:transparent; color:var(--text-dim); }
-  button:disabled{ opacity:0.4; cursor:not-allowed; }
+  button:hover{ border-color:#3d3d45; background:#17171b; }
+  button:active{ transform:scale(0.975); }
+  button.primary{ background:#fafafa; border-color:#fafafa; color:#0a0a0a; }
+  button.primary:hover{ background:#fff; }
+  button.ghost{ background:transparent; color:var(--t-2); border-color:var(--line); }
+  button:disabled{ opacity:0.35; cursor:not-allowed; }
 
-  main{ padding:20px 24px; display:flex; flex-direction:column; gap:18px; max-width:1280px; margin:0 auto; }
-  .row{ display:grid; grid-template-columns: 1.3fr 1fr; gap:18px; }
-  @media (max-width: 900px){ .row{ grid-template-columns: 1fr; } }
+  /* ---------- layout ---------- */
+  main{ max-width:1400px; margin:0 auto; padding:26px; display:flex; flex-direction:column; gap:22px; }
+  .eyebrow{ font-size:10.5px; text-transform:uppercase; letter-spacing:2.5px; color:var(--t-3);
+    font-family:var(--mono); font-weight:600; }
 
-  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
-  .panel-head{ padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
-  .panel-head h2{ font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); margin:0; font-weight:600; }
-  .panel-body{ padding:14px 16px; }
+  .panel{ background:rgba(13,13,16,0.72); border:1px solid var(--line); border-radius:14px; overflow:hidden;
+    backdrop-filter:blur(10px); }
+  .panel-head{ padding:14px 18px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .panel-head h2{ font-size:11px; text-transform:uppercase; letter-spacing:1.6px; color:var(--t-2);
+    margin:0; font-weight:600; }
+  .panel-head .meta{ font-size:11px; color:var(--t-3); font-family:var(--mono); }
 
-  /* ---- Panel 1: network diagram ---- */
-  svg { width:100%; height:auto; display:block; }
-  .hub-label{ font-size:13px; fill:var(--text); font-family:var(--sans); font-weight:600; }
-  .hub-stock{ font-size:11px; fill:var(--text-dim); font-family:var(--mono); }
-  .link-label{ font-size:10px; fill:var(--text-dim); font-family:var(--mono); letter-spacing:0.5px; }
-  .node-circle{ fill:var(--panel-2); stroke:var(--rail); stroke-width:2; transition: all .3s ease; }
-  .node-circle.alert{ fill:var(--alert); stroke:var(--alert); animation: pulse-node 1.4s ease-out infinite; }
-  @keyframes pulse-node{
-    0%{ filter:drop-shadow(0 0 0px var(--alert-glow)); }
-    50%{ filter:drop-shadow(0 0 14px var(--alert-glow)); }
-    100%{ filter:drop-shadow(0 0 0px var(--alert-glow)); }
+  /* ---------- HERO: map ---------- */
+  .hero{ position:relative; scroll-margin-top:78px; }
+  .hero .panel-body{ position:relative; padding:0; }
+  .map-stage{
+    position:relative; width:100%;
+    background:
+      radial-gradient(900px 460px at 50% 34%, rgba(255,255,255,0.05), transparent 62%),
+      #050506;
   }
-  .warehouse-circle{ fill:var(--panel-2); stroke:var(--ok); stroke-width:2; }
-  .link{ stroke:var(--rail); stroke-width:2; fill:none; transition: all .3s ease; }
-  .link.truck{ stroke:var(--warn); stroke-width:3; stroke-dasharray:6 4; animation:dash 1s linear infinite; }
-  @keyframes dash{ to{ stroke-dashoffset:-20; } }
-  .demand-badge{ font-size:11px; font-weight:700; fill:var(--alert); font-family:var(--mono); }
+  svg.map{ width:100%; height:auto; display:block; }
+  .hero-caption{
+    position:absolute; left:22px; bottom:18px; max-width:340px; pointer-events:none;
+  }
+  .hero-caption .big{ font-size:15px; font-weight:700; color:#fff; letter-spacing:-0.2px; }
+  .hero-caption .small{ font-size:11.5px; color:var(--t-2); font-family:var(--mono); margin-top:4px; line-height:1.5; }
+  .legend{ position:absolute; right:20px; top:16px; display:flex; flex-direction:column; gap:8px;
+    font-family:var(--mono); font-size:10.5px; color:var(--t-2); pointer-events:none; }
+  .legend .lg{ display:flex; align-items:center; gap:8px; }
+  .legend .sw{ width:22px; height:0; border-top:2px solid var(--t-4); }
+  .legend .sw.active{ border-top:2px solid #fff; }
+  .legend .sw.rail{ border-top:2px dashed var(--t-3); }
 
-  /* ---- Panel 2: comparison table ---- */
-  #comparePlaceholder{ color:var(--text-dim); font-size:13px; font-family:var(--mono); }
+  /* map primitives (monochrome) */
+  .continent{ fill:url(#dotgrid); }
+  .route-base{ fill:none; stroke:#26262c; stroke-width:1; stroke-linecap:round; }
+  .link{ fill:none; stroke:#4a4a53; stroke-width:1.4; stroke-linecap:round; stroke-dasharray:5 9;
+    opacity:.7; animation:flow 5s linear infinite;
+    transition:stroke .35s ease, stroke-width .35s ease, opacity .35s, stroke-dasharray .35s; }
+  .link.truck{ stroke:#ffffff; stroke-width:2.6; stroke-dasharray:none; opacity:1;
+    filter:drop-shadow(0 0 6px rgba(255,255,255,0.55)); }
+  @keyframes flow{ to{ stroke-dashoffset:-140; } }
+  .flow-dot{ fill:#d4d4d8; }
+
+  .node-halo{ fill:url(#halo); }
+  .node-ring{ fill:none; stroke:rgba(228,228,231,0.55); stroke-width:1.4; }
+  .node-dot{ fill:url(#dot); filter:drop-shadow(0 0 5px rgba(255,255,255,0.35)); transition:all .3s ease; }
+  .node-dot.warehouse{ fill:#ffffff; filter:drop-shadow(0 0 8px rgba(255,255,255,0.6)); }
+  .ping{ fill:none; stroke:#ffffff; stroke-width:1.4; opacity:0; transform-box:fill-box; transform-origin:center; }
+  #node-ohio.alert .dot{ fill:#ffffff; filter:drop-shadow(0 0 12px rgba(255,255,255,0.9)); }
+  #node-ohio.alert .ping{ animation:ping 1.7s ease-out infinite; }
+  #node-ohio.alert .node-ring{ stroke:#ffffff; }
+  @keyframes ping{ 0%{ transform:scale(1); opacity:.55; } 100%{ transform:scale(3.6); opacity:0; } }
+
+  .label-pill{ fill:rgba(10,10,12,0.92); stroke:var(--line-2); stroke-width:1.4; }
+  .label-pill.hub{ stroke:rgba(255,255,255,0.5); }
+  #node-ohio.alert ~ .label-pill{ stroke:#fff; }
+  .hub-name{ font-size:13px; fill:#fff; font-family:var(--sans); font-weight:700; }
+  .hub-sub{ font-size:10.5px; fill:var(--t-3); font-family:var(--mono); }
+  .link-label{ font-size:10px; fill:var(--t-3); font-family:var(--mono); letter-spacing:1.5px; font-weight:600; }
+  .link-label.truck-label{ fill:#fff; }
+  .demand-badge{ font-size:12px; font-weight:700; fill:#fff; font-family:var(--mono); }
+
+  /* ---------- pipeline strip (n8n placeholder) ---------- */
+  .pipe-wrap{ padding:22px 20px; overflow-x:auto; }
+  .pipe{ display:flex; align-items:stretch; gap:0; min-width:820px; }
+  .pnode{
+    flex:1; min-width:130px; position:relative;
+    border:1px solid var(--line-2); border-radius:12px; background:var(--panel-2);
+    padding:14px 14px 13px; opacity:.55; transition:all .3s ease;
+  }
+  .pnode .ic{ width:26px; height:26px; border-radius:7px; border:1px solid var(--line-2);
+    display:flex; align-items:center; justify-content:center; margin-bottom:10px;
+    background:#0c0c0e; font-family:var(--mono); font-size:12px; color:var(--t-2); font-weight:700; }
+  .pnode .role{ font-size:9px; text-transform:uppercase; letter-spacing:1.4px; color:var(--t-3);
+    font-family:var(--mono); }
+  .pnode .pname{ font-size:13.5px; font-weight:700; color:var(--t-1); margin-top:3px; }
+  .pnode .pdesc{ font-size:10.5px; color:var(--t-3); font-family:var(--mono); margin-top:5px; line-height:1.45; }
+  .pnode .pstat{ position:absolute; top:12px; right:12px; width:7px; height:7px; border-radius:50%;
+    background:var(--t-4); transition:all .3s; }
+  .pnode.active{ opacity:1; border-color:#3f3f46; background:#17171b; }
+  .pnode.done{ opacity:1; border-color:rgba(255,255,255,0.45); }
+  .pnode.active .ic, .pnode.done .ic{ border-color:#4a4a53; color:#fff; }
+  .pnode.active .pstat{ background:#fff; box-shadow:0 0 8px rgba(255,255,255,0.7); animation:beacon 1.4s infinite; }
+  .pnode.done .pstat{ background:#fff; }
+  .pconn{ flex:0 0 40px; align-self:center; height:2px; position:relative;
+    background:repeating-linear-gradient(90deg, var(--line-2) 0 6px, transparent 6px 12px); }
+  .pconn.lit{ background:linear-gradient(90deg,#fff,rgba(255,255,255,0.3)); }
+  .pconn::after{ content:""; position:absolute; right:-1px; top:50%; transform:translateY(-50%);
+    border-left:5px solid var(--line-2); border-top:4px solid transparent; border-bottom:4px solid transparent; }
+  .pconn.lit::after{ border-left-color:#fff; }
+  .pipe-note{ font-size:10.5px; color:var(--t-3); font-family:var(--mono); }
+
+  /* ---------- bottom row ---------- */
+  .row{ display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  @media (max-width:940px){ .row{ grid-template-columns:1fr; } }
+
+  #comparePlaceholder{ color:var(--t-3); font-size:12.5px; font-family:var(--mono); padding:6px 2px; }
+  .alert-line{ font-size:12.5px; color:var(--t-1); font-family:var(--mono); margin-bottom:12px;
+    display:flex; align-items:center; gap:8px; }
+  .alert-line::before{ content:""; width:6px; height:6px; border-radius:50%; background:#fff;
+    box-shadow:0 0 8px rgba(255,255,255,0.7); }
   table{ width:100%; border-collapse:collapse; font-size:13px; }
-  th, td{ text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); }
-  th{ color:var(--text-dim); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; }
-  tr.recommended td{ background:rgba(45,212,167,0.08); }
-  tr.recommended td:first-child{ border-left:3px solid var(--ok); padding-left:8px; }
-  .badge{ display:inline-block; font-size:10px; font-family:var(--mono); padding:2px 6px; border-radius:4px; margin-left:6px; }
-  .badge.rec{ background:rgba(45,212,167,0.15); color:var(--ok); }
-  .badge.exec{ background:rgba(45,212,167,0.25); color:var(--ok); font-weight:700; }
-  .alert-line{ font-size:13px; color:var(--alert); font-family:var(--mono); margin-bottom:10px; }
+  th,td{ text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); }
+  th{ color:var(--t-3); font-weight:600; font-size:10px; text-transform:uppercase; letter-spacing:1px; font-family:var(--mono); }
+  td{ font-family:var(--mono); color:var(--t-2); }
+  td:first-child{ color:var(--t-1); font-family:var(--sans); font-weight:600; }
+  tr.recommended td{ background:rgba(255,255,255,0.04); }
+  tr.recommended td:first-child{ border-left:2px solid #fff; padding-left:10px; color:#fff; }
+  .badge{ display:inline-block; font-size:9.5px; font-family:var(--mono); padding:2px 7px; border-radius:5px;
+    margin-left:8px; border:1px solid var(--line-2); color:var(--t-2); vertical-align:middle; letter-spacing:0.5px; }
+  .badge.rec{ border-color:rgba(255,255,255,0.4); color:#e4e4e7; }
+  .badge.exec{ background:#fafafa; color:#0a0a0a; border-color:#fafafa; font-weight:700; }
 
-  /* ---- Panel 3: log ---- */
-  #log{ height:230px; overflow-y:auto; font-family:var(--mono); font-size:12.5px; display:flex; flex-direction:column; gap:6px; }
-  .log-entry{ display:flex; gap:8px; align-items:baseline; padding:5px 8px; border-radius:5px; background:var(--panel-2); }
-  .log-entry .ts{ color:var(--text-dim); flex-shrink:0; }
-  .log-entry .tag{ flex-shrink:0; font-weight:700; padding:1px 6px; border-radius:4px; font-size:11px; }
-  .tag.laserdata{ background:rgba(229,72,77,0.15); color:var(--alert); }
-  .tag.risk_agent{ background:rgba(242,169,59,0.15); color:var(--warn); }
-  .tag.mode_agent{ background:rgba(90,160,255,0.15); color:#5aa0ff; }
-  .tag.rocketride{ background:rgba(45,212,167,0.15); color:var(--ok); }
-  .tag.system{ background:rgba(124,138,154,0.15); color:var(--text-dim); }
-  .log-entry .msg{ color:var(--text); }
-  #log:empty::after{ content:"Waiting for pipeline activity…"; color:var(--text-dim); }
+  #log{ height:250px; overflow-y:auto; font-family:var(--mono); font-size:12px;
+    display:flex; flex-direction:column; gap:6px; padding:2px; }
+  #log:empty::after{ content:"Waiting for pipeline activity…"; color:var(--t-3); padding:6px; }
+  .log-entry{ display:flex; gap:10px; align-items:baseline; padding:7px 10px; border-radius:7px;
+    background:var(--panel-2); border:1px solid var(--line); }
+  .log-entry .ts{ color:var(--t-3); flex-shrink:0; }
+  .log-entry .tag{ flex-shrink:0; font-weight:700; padding:1px 7px; border-radius:5px; font-size:10px;
+    letter-spacing:0.5px; border:1px solid var(--line-2); color:var(--t-2); }
+  .log-entry.laserdata .tag{ color:#fff; border-color:rgba(255,255,255,0.35); }
+  .log-entry.rocketride .tag{ background:#fafafa; color:#0a0a0a; border-color:#fafafa; }
+  .log-entry .msg{ color:var(--t-1); line-height:1.5; }
 
-  footer{ text-align:center; color:var(--text-dim); font-size:11px; font-family:var(--mono); padding:20px; }
+  footer{ text-align:center; color:var(--t-4); font-size:11px; font-family:var(--mono); padding:24px; }
+  footer code{ color:var(--t-3); }
+  .scroll-thin::-webkit-scrollbar{ width:8px; height:8px; }
+  .scroll-thin::-webkit-scrollbar-thumb{ background:var(--line-2); border-radius:8px; }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="title-block">
-    <h1>ColdRelief-500 — Live Distribution Pipeline</h1>
-    <div class="sub">LA Warehouse → Ohio / Texas / New Jersey · LaserData → Risk Agent → Mode Agent → RocketRide</div>
+<canvas id="bgCanvas"></canvas>
+
+<!-- ===================== HERO ===================== -->
+<section class="hero-section" id="top">
+  <div class="hero-vignette"></div>
+  <div class="hero-inner">
+    <span class="hero-badge">Memory · Meets · Motion</span>
+    <h1 class="hero-title">Hopper</h1>
+    <p class="hero-tagline">A supply chain that <b>remembers and reacts.</b> When a live demand spike hits a hub, autonomous agents weigh cost against urgency, reroute the shipment in real time, and write the decision back to graph memory.</p>
+    <div class="hero-cta"><a class="enter-btn" href="#dashboard">Enter Dashboard →</a></div>
   </div>
-  <div class="status">
-    <span class="dot" id="connDot"></span>
-    <span id="connText">connecting…</span>
+  <a class="hero-scroll" href="#dashboard">
+    <span>Scroll</span>
+    <svg class="chev" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </a>
+  <div class="hero-stats"><span id="heroCount">—</span></div>
+</section>
+
+<header id="nav">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M6 15 L12 6 L18 15" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M6 19 L12 12 L18 19" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
+      </svg>
+    </span>
+    <div>
+      <div class="name"><b>Hopper</b></div>
+      <div class="tag">adaptive distribution network</div>
+    </div>
   </div>
-  <div class="controls">
-    <button class="primary" id="btnTrigger">🔥 Fire Trigger (LaserData)</button>
-    <button class="secondary" id="btnSimulate" disabled>▶ Simulate Agents</button>
-    <button class="ghost" id="btnReset">↺ Reset</button>
+  <div class="bar-right">
+    <div class="status"><span class="dot" id="connDot"></span><span id="connText">connecting…</span></div>
+    <div class="controls">
+      <button class="primary" id="btnTrigger">Fire Trigger</button>
+      <button id="btnSimulate" disabled>Run Agents</button>
+      <button class="ghost" id="btnReset">Reset</button>
+    </div>
   </div>
 </header>
 
 <main>
-  <div class="row">
-    <div class="panel">
-      <div class="panel-head"><h2>Network — Distribution Map</h2></div>
-      <div class="panel-body">
-        <svg viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg">
-          <!-- links (drawn first, under nodes) -->
-          <line id="link-ohio" class="link" x1="140" y1="170" x2="400" y2="70"/>
-          <line id="link-texas" class="link" x1="140" y1="170" x2="400" y2="170"/>
-          <line id="link-nj" class="link" x1="140" y1="170" x2="400" y2="270"/>
+  <!-- ===================== HERO MAP ===================== -->
+  <div class="panel hero" id="dashboard">
+    <div class="panel-head">
+      <h2>Distribution Network</h2>
+      <span class="meta">LA Central → Ohio · Texas · New Jersey</span>
+    </div>
+    <div class="panel-body">
+      <div class="map-stage">
+        <div class="legend">
+          <div class="lg"><span class="sw active"></span> active lane</div>
+          <div class="lg"><span class="sw rail"></span> rail (default)</div>
+        </div>
 
-          <text id="link-ohio-label" class="link-label" x="255" y="110">RAIL</text>
-          <text class="link-label" x="255" y="160">RAIL</text>
-          <text class="link-label" x="255" y="235">RAIL</text>
+        <svg class="map" viewBox="0 150 950 448" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+          <defs>
+            <pattern id="dotgrid" width="11" height="11" patternUnits="userSpaceOnUse">
+              <circle cx="2.2" cy="2.2" r="1.35" fill="#6b6b75" opacity="0.55"/>
+              <circle cx="7.7" cy="7.7" r="1.35" fill="#6b6b75" opacity="0.55"/>
+            </pattern>
+            <radialGradient id="dot" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#ffffff"/><stop offset="72%" stop-color="#9a9aa4"/>
+            </radialGradient>
+            <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="rgba(255,255,255,0.30)"/>
+              <stop offset="55%" stop-color="rgba(255,255,255,0.08)"/>
+              <stop offset="75%" stop-color="transparent"/>
+            </radialGradient>
+          </defs>
+
+          <path class="continent" d="M116.5,161.2L156,161.2L197.1,161.2L210.7,161.2L253,161.2L293.9,161.2L335.6,161.2L377.2,161.2L424.3,161.2L471.8,161.2L500.6,161.2L500.6,153L505.3,152.9L507.7,164.5L512,168.1L521.7,169.4L535.9,172.7L549.3,179.2L560.6,176.5L577.7,181.9L582.2,181.7L594.6,175.8L607.6,183.3L621.2,191.3L632.4,198.2L643.2,204.7L644.5,210L647.8,212L646.9,214L650.7,214.6L653.4,212.5L654.1,217.3L656.9,220.4L660.7,220.4L662.7,222.9L661,226.4L675.5,235.7L678.4,253.5L681.2,270.3L677.1,281.5L670.6,291.9L667.6,298.5L667.3,300.4L668.8,303.1L673.5,306L677,306L693.1,296L707.4,293.1L725.5,283.7L725.8,281.8L724.5,276L722.3,272.3L728.6,269.2L742.2,269.1L755,269.2L759.4,261.7L761.1,260.2L775.8,246.2L782,242.6L803.1,242.4L828.7,242.4L830.1,237.6L834.5,236.6L840.4,233.5L845.4,224.5L849.5,208.9L860.1,193.5L864.7,198.8L874.1,195.4L880.2,201.3L880.2,228.7L889.3,239.9L891.7,246.3L876.9,255.7L862.6,262.4L848,268.1L840.6,279.4L838.3,283.7L838.1,293.7L842.7,303.6L848.5,304.1L847,297.3L851.1,301.4L850,306.7L840.7,309.7L834,309.4L823.8,312.6L817.7,313.5L809.6,314.4L798.1,319.7L818.5,316.3L822.6,319.8L803.2,325.3L794.3,325.3L794.7,323.1L790.5,328.1L794.6,329L791.6,342L781.5,355.8L780.5,351.2L777.4,350.3L772.9,345.8L775.7,355.4L779.2,358.6L779.4,365.3L775,372.2L767.1,386.2L765.9,385.5L770.2,373.5L763.1,366.8L761.5,352L758.8,359.7L761.8,371L752.6,368.2L762.2,373.9L762.7,390.5L766.7,391.7L768.1,397.7L770.1,414.9L761.3,427.5L746.9,432.5L737.8,442.3L730.9,443.4L723.8,449.5L721.9,455.1L706.7,465.8L698.8,473.6L692.3,483.3L690.1,494.8L692.6,506L697.2,519.6L703.4,530.8L703.5,537.6L710.1,555.7L709.6,566.2L709,572.2L705.6,581.6L701.4,583.5L694.6,581.7L692.4,574.9L687.1,571.4L679.7,558.1L673.3,546.2L671.2,540L674.1,529.6L670.2,520.9L659.4,507.5L654,505.1L639.9,512.3L637.5,511.5L630.8,504.1L622.1,500.1L606.4,502.1L594,500.3L583.5,501.4L577.8,503.9L580.3,508.2L580,514.7L583,517.8L580.3,519.9L575.2,517.6L570,520.6L559.9,520.1L549.5,511.7L537.5,513.7L527.4,510L518.7,511.1L507,514.8L494.4,526.6L480.6,533.4L473,540.9L469.9,548L469.7,558.7L470.4,566.1L473,571.4L467.6,571.9L457.8,568.5L447,563.7L443.1,556.4L440,545.5L431.8,536.5L427,527.3L420.1,516.4L410.3,510L399,510.3L390.2,522.9L378.7,518.2L371.6,513.4L368.1,504.6L363.5,496.2L355.3,489L348.2,483.9L343.1,478.2L319.1,478.2L319.1,484.9L308,484.9L280.5,485L248.8,473.5L227.9,465.5L229.2,462.3L211.5,464.1L195.8,465.4L193.5,456.9L184.5,447.4L178,445.4L176.5,440.6L168.7,439.7L163.7,435.2L150.8,433.6L147.3,430.8L145.6,421.6L132.1,404.4L120.6,380.3L121.1,376.2L115,370.4L104.2,355.6L102.3,340.9L94.9,331L98,315.9L97.5,300L93,285.6L98.5,267.6L100.2,250.1L101.8,232.3L99.3,205.4L94.9,187.9L90.9,178.3L92.6,174.2L112.7,181.3L120,200.7L123.5,195.3L121.2,178.4Z"/>
+
+          <!-- routes: LA -> Ohio / Texas / New Jersey -->
+          <path class="route-base" d="M 180.3 440.2 Q 459.7 462.25 700 318"/>
+          <path id="link-ohio" class="link" d="M 180.3 440.2 Q 459.7 462.25 700 318"/>
+          <path class="route-base" d="M 180.3 440.2 Q 325.66 498.4 477.8 461.4"/>
+          <path id="link-texas" class="link" d="M 180.3 440.2 Q 325.66 498.4 477.8 461.4"/>
+          <path class="route-base" d="M 180.3 440.2 Q 502.8 486 792 336"/>
+          <path id="link-nj" class="link" d="M 180.3 440.2 Q 502.8 486 792 336"/>
+
+          <circle class="flow-dot" r="2.3"><animateMotion dur="4.5s" repeatCount="indefinite" rotate="auto"><mpath xlink:href="#link-ohio"/></animateMotion></circle>
+          <circle class="flow-dot" r="2.3"><animateMotion dur="4.5s" begin="1.5s" repeatCount="indefinite" rotate="auto"><mpath xlink:href="#link-texas"/></animateMotion></circle>
+          <circle class="flow-dot" r="2.3"><animateMotion dur="4.5s" begin="3s" repeatCount="indefinite" rotate="auto"><mpath xlink:href="#link-nj"/></animateMotion></circle>
+
+          <text id="link-ohio-label" class="link-label" x="450" y="410" text-anchor="middle">RAIL</text>
+          <text class="link-label" x="327" y="466" text-anchor="middle">RAIL</text>
+          <text class="link-label" x="494" y="428" text-anchor="middle">RAIL</text>
 
           <!-- LA warehouse -->
-          <circle class="warehouse-circle" cx="110" cy="170" r="34"/>
-          <text class="hub-label" x="110" y="175" text-anchor="middle">LA</text>
-          <text class="hub-stock" x="110" y="222" text-anchor="middle">Central Warehouse</text>
+          <g>
+            <circle class="node-halo" cx="180.3" cy="440.2" r="15"/>
+            <circle class="node-ring" cx="180.3" cy="440.2" r="7"/>
+            <circle class="node-dot warehouse" cx="180.3" cy="440.2" r="4.6"/>
+            <rect class="label-pill hub" x="149" y="452" width="62" height="22" rx="8"/>
+            <text class="hub-name" x="180.3" y="467" text-anchor="middle">LA</text>
+            <text class="hub-sub" x="180.3" y="491" text-anchor="middle">Central Warehouse</text>
+          </g>
 
-          <!-- Ohio -->
-          <circle id="node-ohio" class="node-circle" cx="430" cy="70" r="28"/>
-          <text class="hub-label" x="430" y="75" text-anchor="middle">OH</text>
-          <text class="hub-stock" id="stock-ohio" x="430" y="112" text-anchor="middle">Stock: 1,200 units</text>
-          <text class="demand-badge" id="demand-ohio" x="430" y="38" text-anchor="middle" opacity="0"></text>
+          <!-- Ohio (outbreak) -->
+          <g id="node-ohio">
+            <text class="demand-badge" id="demand-ohio" x="700" y="294" text-anchor="middle" opacity="0"></text>
+            <circle class="ping" cx="700" cy="318" r="7"/>
+            <circle class="node-halo" cx="700" cy="318" r="15"/>
+            <circle class="node-ring" cx="700" cy="318" r="7"/>
+            <circle class="node-dot dot" cx="700" cy="318" r="4.6"/>
+            <rect class="label-pill" x="672" y="330" width="56" height="22" rx="8"/>
+            <text class="hub-name" x="700" y="345" text-anchor="middle">Ohio</text>
+            <text class="hub-sub" id="stock-ohio" x="700" y="369" text-anchor="middle">3,800 units</text>
+          </g>
 
           <!-- Texas -->
-          <circle class="node-circle" cx="430" cy="170" r="28"/>
-          <text class="hub-label" x="430" y="175" text-anchor="middle">TX</text>
-          <text class="hub-stock" x="430" y="212" text-anchor="middle">Stock: 900 units</text>
+          <g>
+            <circle class="node-halo" cx="477.8" cy="461.4" r="15"/>
+            <circle class="node-ring" cx="477.8" cy="461.4" r="7"/>
+            <circle class="node-dot" cx="477.8" cy="461.4" r="4.6"/>
+            <rect class="label-pill" x="447" y="473" width="62" height="22" rx="8"/>
+            <text class="hub-name" x="477.8" y="488" text-anchor="middle">Texas</text>
+            <text class="hub-sub" x="477.8" y="512" text-anchor="middle">4,200 units</text>
+          </g>
 
           <!-- New Jersey -->
-          <circle class="node-circle" cx="430" cy="270" r="28"/>
-          <text class="hub-label" x="430" y="275" text-anchor="middle">NJ</text>
-          <text class="hub-stock" x="430" y="312" text-anchor="middle">Stock: 850 units</text>
+          <g>
+            <circle class="node-halo" cx="792" cy="336" r="15"/>
+            <circle class="node-ring" cx="792" cy="336" r="7"/>
+            <circle class="node-dot" cx="792" cy="336" r="4.6"/>
+            <rect class="label-pill" x="745" y="348" width="94" height="22" rx="8"/>
+            <text class="hub-name" x="792" y="363" text-anchor="middle">New Jersey</text>
+            <text class="hub-sub" x="792" y="387" text-anchor="middle">5,000 units</text>
+          </g>
         </svg>
-      </div>
-    </div>
 
-    <div class="panel">
-      <div class="panel-head"><h2>Mode Decision — Ohio Shipment</h2></div>
-      <div class="panel-body" id="comparePanel">
-        <div id="comparePlaceholder">No active event. Fire the trigger to evaluate transport modes for Ohio.</div>
+        <div class="hero-caption">
+          <div class="big" id="heroBig">Network stable — all lanes on rail</div>
+          <div class="small" id="heroSmall">Fire the LaserData trigger to inject a live demand spike at Ohio.</div>
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- ===================== PIPELINE (n8n placeholder) ===================== -->
   <div class="panel">
-    <div class="panel-head"><h2>Live Pipeline Log</h2></div>
-    <div class="panel-body">
-      <div id="log"></div>
+    <div class="panel-head">
+      <h2>Pipeline</h2>
+      <span class="pipe-note">n8n workflow — placeholder · lights up as events flow</span>
+    </div>
+    <div class="pipe-wrap scroll-thin">
+      <div class="pipe">
+        <div class="pnode" data-stage="laserdata">
+          <div class="ic">◑</div><div class="role">Real-time</div>
+          <div class="pname">LaserData</div><div class="pdesc">live demand signal</div>
+          <span class="pstat"></span>
+        </div>
+        <div class="pconn" data-conn="1"></div>
+        <div class="pnode" data-stage="falkordb">
+          <div class="ic">◆</div><div class="role">Memory</div>
+          <div class="pname">FalkorDB</div><div class="pdesc">graph context pull</div>
+          <span class="pstat"></span>
+        </div>
+        <div class="pconn" data-conn="2"></div>
+        <div class="pnode" data-stage="risk">
+          <div class="ic">▲</div><div class="role">Agent</div>
+          <div class="pname">Risk Agent</div><div class="pdesc">stockout gap</div>
+          <span class="pstat"></span>
+        </div>
+        <div class="pconn" data-conn="3"></div>
+        <div class="pnode" data-stage="mode">
+          <div class="ic">▲</div><div class="role">Agent</div>
+          <div class="pname">Mode Agent</div><div class="pdesc">cheapest viable</div>
+          <span class="pstat"></span>
+        </div>
+        <div class="pconn" data-conn="4"></div>
+        <div class="pnode" data-stage="rocketride">
+          <div class="ic">➤</div><div class="role">Execution</div>
+          <div class="pname">RocketRide</div><div class="pdesc">mode switch + write-back</div>
+          <span class="pstat"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== BOTTOM ROW ===================== -->
+  <div class="row">
+    <div class="panel">
+      <div class="panel-head"><h2>Mode Decision — Ohio</h2><span class="meta">cost vs. speed</span></div>
+      <div class="panel-body" id="comparePanel" style="padding:14px 18px;">
+        <div id="comparePlaceholder">No active event. Fire the trigger to evaluate transport modes for Ohio.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Live Pipeline Log</h2><span class="meta">LaserData → FalkorDB → Agents → RocketRide</span></div>
+      <div class="panel-body" style="padding:14px 18px;">
+        <div id="log" class="scroll-thin"></div>
+      </div>
     </div>
   </div>
 </main>
 
-<footer>POST JSON to <code>/event</code> — types: trigger · risk_agent · mode_agent · rocketride · reset</footer>
+<footer>Hopper · POST JSON to <code>/event</code> — types: trigger · risk_agent · mode_agent · rocketride · reset</footer>
 
 <script>
 const MODE_DATA = {
-  rail:  { label: 'Rail',  cost: '$0.18 / unit', time: '4–5 days' },
-  truck: { label: 'Truck', cost: '$0.45 / unit', time: '1–2 days' },
-  air:   { label: 'Air',   cost: '$1.20 / unit', time: '< 24 hrs' },
+  rail:  { label: 'Rail',  cost: '$2,000', time: '120 hrs' },
+  truck: { label: 'Truck', cost: '$4,500', time: '48 hrs' },
+  air:   { label: 'Air',   cost: '$9,000', time: '18 hrs' },
 };
 
 const els = {
@@ -199,19 +461,24 @@ const els = {
   demandOhio: document.getElementById('demand-ohio'),
   linkOhio: document.getElementById('link-ohio'),
   linkOhioLabel: document.getElementById('link-ohio-label'),
+  heroBig: document.getElementById('heroBig'),
+  heroSmall: document.getElementById('heroSmall'),
 };
 
 let state = { triggered: false, recommended: null, executed: null };
 
-function nowStamp(){
-  const d = new Date();
-  return d.toTimeString().slice(0,8);
-}
+function nowStamp(){ return new Date().toTimeString().slice(0,8); }
+
+function pnode(stage){ return document.querySelector(`.pnode[data-stage="${stage}"]`); }
+function conn(n){ return document.querySelector(`.pconn[data-conn="${n}"]`); }
+function stageActive(stage){ const n = pnode(stage); if(n){ n.classList.remove('done'); n.classList.add('active'); } }
+function stageDone(stage){ const n = pnode(stage); if(n){ n.classList.remove('active'); n.classList.add('done'); } }
+function litConn(n, on){ const c = conn(n); if(c) c.classList.toggle('lit', on); }
 
 function addLog(tag, label, message){
   const row = document.createElement('div');
-  row.className = 'log-entry';
-  row.innerHTML = `<span class="ts">${nowStamp()}</span><span class="tag ${tag}">${label}</span><span class="msg"></span>`;
+  row.className = 'log-entry ' + tag;
+  row.innerHTML = `<span class="ts">${nowStamp()}</span><span class="tag">${label}</span><span class="msg"></span>`;
   row.querySelector('.msg').textContent = message;
   els.log.appendChild(row);
   els.log.scrollTop = els.log.scrollHeight;
@@ -222,22 +489,15 @@ function renderCompareTable(){
     const isRec = state.recommended === key;
     const isExec = state.executed === key;
     let badges = '';
-    if (isRec) badges += `<span class="badge rec">recommended</span>`;
-    if (isExec) badges += `<span class="badge exec">executed ✓</span>`;
+    if (isRec && !isExec) badges += `<span class="badge rec">recommended</span>`;
+    if (isExec) badges += `<span class="badge exec">executed</span>`;
     return `<tr class="${isRec ? 'recommended' : ''}">
-      <td>${m.label}${badges}</td>
-      <td>${m.cost}</td>
-      <td>${m.time}</td>
-    </tr>`;
+      <td>${m.label}${badges}</td><td>${m.cost}</td><td>${m.time}</td></tr>`;
   }).join('');
-
   els.comparePanel.innerHTML = `
-    <div class="alert-line">⚠ Ohio demand spiking — evaluating transport modes</div>
-    <table>
-      <thead><tr><th>Mode</th><th>Cost</th><th>Transit time</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
+    <div class="alert-line">Ohio demand spiking — evaluating transport modes</div>
+    <table><thead><tr><th>Mode</th><th>Cost</th><th>Transit</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
 }
 
 function handleEvent(msg){
@@ -248,13 +508,17 @@ function handleEvent(msg){
       els.nodeOhio.classList.add('alert');
       els.demandOhio.textContent = `×${p.demand_multiplier || '?'} demand`;
       els.demandOhio.setAttribute('opacity', '1');
+      els.heroBig.textContent = 'Demand spike detected at Ohio';
+      els.heroSmall.textContent = `flu_outbreak · ×${p.demand_multiplier} demand · evaluating rail vs. faster modes`;
       renderCompareTable();
+      stageDone('laserdata'); stageActive('falkordb'); litConn(1, true);
       els.btnSimulate.disabled = false;
-      addLog('laserdata', 'LASERDATA', `Live event received: ${p.event || 'unknown'} — hub=${p.hub}, product=${p.product}, demand_multiplier=${p.demand_multiplier}`);
+      addLog('laserdata', 'LASERDATA', `Live event: ${p.event || 'unknown'} — hub=${p.hub}, product=${p.product}, demand_multiplier=${p.demand_multiplier}`);
       break;
     }
     case 'risk_agent': {
       const p = msg.payload || {};
+      stageDone('falkordb'); stageDone('risk'); stageActive('mode'); litConn(2, true); litConn(3, true);
       addLog('risk_agent', 'RISK AGENT', p.message || 'Risk assessment received.');
       break;
     }
@@ -262,6 +526,7 @@ function handleEvent(msg){
       const p = msg.payload || {};
       if (p.recommended_mode) state.recommended = p.recommended_mode;
       renderCompareTable();
+      stageDone('mode'); stageActive('rocketride'); litConn(4, true);
       addLog('mode_agent', 'MODE AGENT', p.message || `Recommended mode: ${p.recommended_mode}`);
       break;
     }
@@ -270,15 +535,15 @@ function handleEvent(msg){
       state.executed = state.recommended || 'truck';
       renderCompareTable();
       els.linkOhio.classList.add('truck');
+      els.linkOhioLabel.classList.add('truck-label');
       els.linkOhioLabel.textContent = (MODE_DATA[state.executed]?.label || 'TRUCK').toUpperCase();
+      els.heroBig.textContent = `Ohio switched to ${(MODE_DATA[state.executed]?.label || 'Truck')}`;
+      els.heroSmall.textContent = 'RocketRide executed the mode switch — decision written back to FalkorDB.';
+      stageDone('rocketride');
       addLog('rocketride', 'ROCKETRIDE', p.message || `Shipment executed. Confirmation: ${p.confirmation_id || 'n/a'}`);
       break;
     }
-    case 'reset': {
-      resetUI();
-      addLog('system', 'SYSTEM', 'Pipeline reset to baseline.');
-      break;
-    }
+    case 'reset': { resetUI(); addLog('system', 'SYSTEM', 'Pipeline reset to baseline.'); break; }
   }
 }
 
@@ -287,71 +552,134 @@ function resetUI(){
   els.nodeOhio.classList.remove('alert');
   els.demandOhio.setAttribute('opacity', '0');
   els.linkOhio.classList.remove('truck');
+  els.linkOhioLabel.classList.remove('truck-label');
   els.linkOhioLabel.textContent = 'RAIL';
+  els.heroBig.textContent = 'Network stable — all lanes on rail';
+  els.heroSmall.textContent = 'Fire the LaserData trigger to inject a live demand spike at Ohio.';
   els.comparePanel.innerHTML = '<div id="comparePlaceholder">No active event. Fire the trigger to evaluate transport modes for Ohio.</div>';
+  document.querySelectorAll('.pnode').forEach(n => n.classList.remove('active','done'));
+  document.querySelectorAll('.pconn').forEach(c => c.classList.remove('lit'));
   els.btnSimulate.disabled = true;
 }
 
 async function postEvent(payload){
   try {
-    await fetch('/event', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  } catch (e) {
-    addLog('system', 'SYSTEM', `Failed to send event — is server.js running? (${e.message})`);
-  }
+    await fetch('/event', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+  } catch (e) { addLog('system', 'SYSTEM', `Failed to send event — is the server running? (${e.message})`); }
 }
 
-els.btnTrigger.addEventListener('click', () => {
-  postEvent({
-    type: 'trigger',
-    payload: { event: 'flu_outbreak', hub: 'Ohio', product: 'ColdRelief-500', demand_multiplier: 3.2 },
-  });
-});
-
+els.btnTrigger.addEventListener('click', () => postEvent({
+  type: 'trigger',
+  payload: { event: 'flu_outbreak', hub: 'Ohio', product: 'ColdRelief-500', demand_multiplier: 3.2 },
+}));
 els.btnReset.addEventListener('click', () => postEvent({ type: 'reset' }));
 
-// Fallback/safety-net path: plays the rest of the pipeline automatically
-// if Person 1 / Person 2's real agents aren't posting live yet.
-// Uses the exact same /event endpoint, so real and simulated messages
-// are handled by identical code on the UI side.
+// Safety-net: replays the rest of the pipeline if the real agents aren't posting yet.
 els.btnSimulate.addEventListener('click', () => {
   els.btnSimulate.disabled = true;
-  setTimeout(() => postEvent({
-    type: 'risk_agent',
-    payload: { message: 'Ohio inventory covers ~1.4 days at 3.2x demand — projected stockout in under 48 hours.', stockout_hours: 34 },
-  }), 900);
-
-  setTimeout(() => postEvent({
-    type: 'mode_agent',
-    payload: { message: 'Rail transit (4–5 days) exceeds the stockout window. Truck is the fastest option that still clears the cost ceiling — recommending truck.', recommended_mode: 'truck' },
-  }), 2200);
-
-  setTimeout(() => postEvent({
-    type: 'rocketride',
-    payload: { message: 'Truck dispatched from LA warehouse via RocketRide. ETA to Ohio hub: 30 hours.', confirmation_id: 'RR-48213', eta_hours: 30 },
-  }), 3600);
+  setTimeout(() => postEvent({ type:'risk_agent', payload:{ message:'Ohio covers ~2.97 days at 3.2x demand — rail (5 days) arrives too late, 2.03-day stockout gap.' } }), 800);
+  setTimeout(() => postEvent({ type:'mode_agent', payload:{ message:'Truck (48 hrs, $4,500) is the cheapest mode that closes the gap — recommending truck.', recommended_mode:'truck' } }), 2000);
+  setTimeout(() => postEvent({ type:'rocketride', payload:{ message:'Truck dispatched from LA via RocketRide. Decision written back to FalkorDB.', confirmation_id:'RR-48213' } }), 3400);
 });
 
-// --- SSE connection ---
+// --- SSE ---
 function connect(){
   const es = new EventSource('/events');
-  es.onopen = () => {
-    els.connDot.className = 'dot live';
-    els.connText.textContent = 'live';
-  };
-  es.onerror = () => {
-    els.connDot.className = 'dot down';
-    els.connText.textContent = 'reconnecting…';
-  };
-  es.onmessage = (e) => {
-    try { handleEvent(JSON.parse(e.data)); }
-    catch(err){ console.error('bad event', err); }
-  };
+  es.onopen = () => { els.connDot.className = 'dot live'; els.connText.textContent = 'live'; };
+  es.onerror = () => { els.connDot.className = 'dot down'; els.connText.textContent = 'reconnecting…'; };
+  es.onmessage = (e) => { try { handleEvent(JSON.parse(e.data)); } catch(err){ console.error('bad event', err); } };
 }
 connect();
+</script>
+
+<!-- ===================== HERO PARTICLE FIELD (vanilla port, monochrome) ===================== -->
+<script>
+(function(){
+  const canvas = document.getElementById('bgCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const DENSITY = 0.00008, BG_DENSITY = 0.00004, MAX_P = 220;
+  const MOUSE_R = 170, RETURN = 0.08, DAMP = 0.90, REPEL = 1.2;
+  let particles = [], bg = [], W = 0, H = 0, dpr = 1, running = true;
+  const mouse = { x:-9999, y:-9999, active:false };
+  const rnd = (a,b)=>Math.random()*(b-a)+a;
+
+  function init(w,h){
+    const count = Math.min(Math.floor(w*h*DENSITY), MAX_P);
+    particles = [];
+    for(let i=0;i<count;i++){ const x=Math.random()*w, y=Math.random()*h;
+      particles.push({ x, y, ox:x, oy:y, vx:0, vy:0, size:rnd(1,2.4),
+        color: Math.random()>0.85 ? '#b8b8c0' : '#ffffff' }); }
+    const bc = Math.floor(w*h*BG_DENSITY); bg = [];
+    for(let i=0;i<bc;i++){ bg.push({ x:Math.random()*w, y:Math.random()*h,
+      vx:(Math.random()-0.5)*0.18, vy:(Math.random()-0.5)*0.18,
+      size:rnd(0.5,1.4), alpha:rnd(0.1,0.4), phase:Math.random()*Math.PI*2 }); }
+    const el = document.getElementById('heroCount'); if(el) el.textContent = (count+bc)+' nodes';
+  }
+
+  function resize(){
+    W = window.innerWidth; H = window.innerHeight;
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    init(W,H);
+  }
+
+  function frame(t){
+    if(!running){ requestAnimationFrame(frame); return; }
+    ctx.clearRect(0,0,W,H);
+
+    // faint pulsing radial glow (white)
+    const cx=W/2, cy=H*0.42, op=Math.sin(t*0.0008)*0.02 + 0.05;
+    const g = ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*0.7);
+    g.addColorStop(0,`rgba(255,255,255,${op})`); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    // drifting background stars
+    ctx.fillStyle='#ffffff';
+    for(const p of bg){ p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0; if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      const tw=Math.sin(t*0.002+p.phase)*0.5+0.5;
+      ctx.globalAlpha=p.alpha*(0.3+0.7*tw);
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,6.283); ctx.fill(); }
+    ctx.globalAlpha=1;
+
+    // forces: mouse repulsion + spring back to origin
+    for(const p of particles){
+      const dx=mouse.x-p.x, dy=mouse.y-p.y, d=Math.hypot(dx,dy);
+      if(mouse.active && d<MOUSE_R && d>0){ const f=(MOUSE_R-d)/MOUSE_R*REPEL;
+        p.vx-=(dx/d)*f*5; p.vy-=(dy/d)*f*5; }
+      p.vx+=(p.ox-p.x)*RETURN; p.vy+=(p.oy-p.y)*RETURN;
+    }
+    // elastic collisions
+    for(let i=0;i<particles.length;i++){ for(let j=i+1;j<particles.length;j++){
+      const a=particles[i], b=particles[j];
+      const dx=b.x-a.x, dy=b.y-a.y, dsq=dx*dx+dy*dy, md=a.size+b.size;
+      if(dsq<md*md){ const dist=Math.sqrt(dsq)||0.01, nx=dx/dist, ny=dy/dist;
+        const ov=md-dist, px=nx*ov*0.5, py=ny*ov*0.5;
+        a.x-=px; a.y-=py; b.x+=px; b.y+=py;
+        const vn=(a.vx-b.vx)*nx+(a.vy-b.vy)*ny;
+        if(vn>0){ const m1=a.size,m2=b.size,e=0.85,imp=(-(1+e)*vn)/(1/m1+1/m2);
+          a.vx+=imp*nx/m1; a.vy+=imp*ny/m1; b.vx-=imp*nx/m2; b.vy-=imp*ny/m2; } } } }
+    // integrate + draw
+    for(const p of particles){ p.vx*=DAMP; p.vy*=DAMP; p.x+=p.vx; p.y+=p.vy;
+      const v=Math.hypot(p.vx,p.vy), o=Math.min(0.3+v*0.1,1);
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,6.283);
+      ctx.fillStyle = p.color==='#ffffff' ? `rgba(255,255,255,${o})` : p.color; ctx.fill(); }
+
+    requestAnimationFrame(frame);
+  }
+
+  // canvas is fixed to the viewport, so window coords map directly
+  window.addEventListener('mousemove', e=>{ mouse.x=e.clientX; mouse.y=e.clientY; mouse.active=true; });
+  window.addEventListener('mouseout', ()=>{ mouse.active=false; });
+  window.addEventListener('resize', resize);
+  // pause when the tab is hidden (saves CPU)
+  document.addEventListener('visibilitychange', ()=>{ running = !document.hidden; });
+  resize(); requestAnimationFrame(frame);
+})();
 </script>
 </body>
 </html>

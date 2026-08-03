@@ -77,6 +77,14 @@ export async function execute_mode_selection(
   emit({
     source: "rocketride",
     label: `EXECUTED: ${decision.hub} restock switched to ${decision.recommended_mode.toUpperCase()} ($${decision.cost}, ${decision.transit_hrs}hrs)`,
+    detail: {
+      executed: true,
+      hub: decision.hub,
+      mode: decision.recommended_mode,
+      cost: decision.cost,
+      transit_hrs: decision.transit_hrs,
+      transport,
+    },
   });
 
   // The action: persist the decision back into the graph.
