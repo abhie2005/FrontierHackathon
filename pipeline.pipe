@@ -1,234 +1,319 @@
 {
   "components": [
     {
-      "id": "laserdata_trigger",
-      "provider": "webhook",
+      "id": "chat_1",
+      "provider": "chat",
+      "name": "1. Trigger In (demand signal)",
       "config": {
         "hideForm": true,
         "mode": "Source",
         "parameters": {},
-        "type": "webhook"
+        "type": "chat"
       },
       "ui": {
         "position": {
-          "x": 50,
-          "y": 150
+          "x": 40,
+          "y": 240
         },
         "measured": {
-          "width": 160,
-          "height": 80
+          "width": 180,
+          "height": 70
         },
         "nodeType": "default",
         "formDataValid": true
       }
     },
     {
-      "id": "falkordb_context_pull",
-      "provider": "tool_falkordb",
-      "config": {
-        "type": "tool_falkordb",
-        "host": "localhost",
-        "port": 6379,
-        "tls": false,
-        "graph": "warehouse",
-        "allow_writes": false,
-        "max_rows": 250,
-        "query_timeout_ms": 30000
-      },
-      "ui": {
-        "position": {
-          "x": 250,
-          "y": 50
-        },
-        "measured": {
-          "width": 160,
-          "height": 80
-        },
-        "nodeType": "default",
-        "formDataValid": true
-      }
-    },
-    {
-      "id": "llm_1",
-      "provider": "llm_openai",
-      "config": {
-        "profile": "openai-5-2",
-        "openai-5-2": {
-          "apikey": "${ROCKETRIDE_OPENAI_KEY}"
-        },
-        "parameters": {}
-      },
-      "ui": {
-        "position": {
-          "x": 250,
-          "y": 150
-        },
-        "measured": {
-          "width": 160,
-          "height": 80
-        },
-        "nodeType": "default",
-        "formDataValid": true
-      }
-    },
-    {
-      "id": "memory_1",
-      "provider": "memory_internal",
-      "config": {
-        "type": "memory_internal"
-      },
-      "ui": {
-        "position": {
-          "x": 250,
-          "y": 250
-        },
-        "measured": {
-          "width": 160,
-          "height": 80
-        },
-        "nodeType": "default",
-        "formDataValid": true
-      }
-    },
-    {
-      "id": "rocketride_execution",
-      "provider": "tool_python",
-      "config": {
-        "type": "tool_python",
-        "allowedModules": [],
-        "timeout": 20
-      },
-      "ui": {
-        "position": {
-          "x": 450,
-          "y": 50
-        },
-        "measured": {
-          "width": 160,
-          "height": 80
-        },
-        "nodeType": "default",
-        "formDataValid": true
-      }
-    },
-    {
-      "id": "falkordb_writeback",
-      "provider": "tool_falkordb",
-      "config": {
-        "type": "tool_falkordb",
-        "host": "localhost",
-        "port": 6379,
-        "tls": false,
-        "graph": "warehouse",
-        "allow_writes": true,
-        "max_rows": 250,
-        "query_timeout_ms": 30000
-      },
-      "ui": {
-        "position": {
-          "x": 450,
-          "y": 250
-        },
-        "measured": {
-          "width": 160,
-          "height": 80
-        },
-        "nodeType": "default",
-        "formDataValid": true
-      }
-    },
-    {
-      "id": "guild_negotiation",
+      "id": "mode_agent",
       "provider": "agent_rocketride",
+      "name": "2. MODE AGENT - owns the decision",
       "config": {
-        "agent_description": "Coordinates negotiation between Risk Agent and Mode Agent",
+        "agent_description": "Mode Agent. Owns the final transport-mode decision for a restock leg from the LA Central warehouse to a regional hub. Delegates stockout risk analysis to risk_agent, reads the transport options from the FalkorDB supply graph, applies the cost-vs-urgency rule, and writes the decision back into the graph.",
         "instructions": [
-          "Risk Agent assesses stockout gap: days_of_stock_left = current_stock / (effective_weekly_demand / 7).",
-          "Mode Agent compares cost-vs-urgency of modes (rail, truck, air).",
-          "RocketRide executes final mode-switch decision and writes back to graph memory."
+          "You are the Mode Agent in a two-agent supply-chain negotiation. The incoming question carries a live demand-signal event as JSON context with the fields: event, hub, product, demand_multiplier. Read hub, product and demand_multiplier from that context. Never invent them.",
+          "STEP 1 - DELEGATE RISK. Call the risk_agent tool (run_agent) exactly once. Pass it a single JSON object: {\"hub\": <hub>, \"product\": <product>, \"demand_multiplier\": <demand_multiplier>}. It returns JSON with: current_stock, avg_weekly_demand, effective_weekly_demand, days_of_stock_left, rail_transit_days, risk_level, stockout_gap_days. Use its numbers as-is; do not recompute them.",
+          "STEP 2 - READ THE TRANSPORT OPTIONS. Use the falkordb_read tool to run this read-only Cypher, substituting the real hub name for <HUB> (single quotes, exact spelling, e.g. 'Ohio', 'Texas', 'NewJersey'): MATCH (h:Hub {name: '<HUB>'})-[:HAS_MODE]->(m:TransportMode) RETURN m.mode AS mode, m.cost AS cost, m.transit_hrs AS transit_hrs ORDER BY m.cost ASC",
+          "STEP 3 - APPLY THE SELECTION RULE. This rule is fixed; do not improvise around it. If risk_level is 'low', choose 'rail' (the cheapest mode, which is the standing plan). If risk_level is 'high', consider only modes whose transit_hrs / 24 is less than or equal to days_of_stock_left, and among those choose the one with the lowest cost. If no mode qualifies, choose the mode with the lowest transit_hrs. Ties on cost break toward the lower transit_hrs.",
+          "STEP 4 - WRITE THE DECISION BACK. Use the falkordb_write tool to run this Cypher, substituting <HUB>, <PRODUCT>, <MODE> and <RATIONALE> (escape any single quote inside the rationale as two single quotes): MATCH (h:Hub {name: '<HUB>'})-[:HAS_MODE]->(m:TransportMode {mode: '<MODE>'}) CREATE (s:ShipmentDecision {hub: '<HUB>', product: '<PRODUCT>', mode: '<MODE>', cost: m.cost, transit_hrs: m.transit_hrs, rationale: '<RATIONALE>', timestamp: timestamp()}) CREATE (h)-[:HAD_DECISION]->(s) RETURN s.hub AS hub, s.mode AS mode, s.cost AS cost, s.transit_hrs AS transit_hrs, s.rationale AS rationale, s.timestamp AS timestamp",
+          "STEP 5 - ANSWER. Reply with a single raw JSON object and nothing else: no prose, no markdown, no code fences. Shape exactly: {\"hub\": string, \"product\": string, \"risk_level\": \"low\"|\"high\", \"stockout_gap_days\": number, \"recommended_mode\": \"rail\"|\"truck\"|\"air\", \"cost\": number, \"transit_hrs\": number, \"rationale\": string, \"written_back\": boolean}. cost and transit_hrs must be the graph's values for the chosen mode. stockout_gap_days comes from the Risk Agent. rationale is one sentence naming the tradeoff, e.g. 'Rail arrives too late to cover the outbreak-driven demand spike; truck closes the 2-day gap at a moderate cost premium over rail.' written_back is true only if STEP 4 succeeded."
         ],
-        "max_waves": 10
+        "max_waves": 12,
+        "parameters": {}
       },
       "input": [
         {
           "lane": "questions",
-          "from": "laserdata_trigger"
-        }
-      ],
-      "control": [
-        {
-          "classType": "llm",
-          "from": "llm_1"
-        },
-        {
-          "classType": "memory",
-          "from": "memory_1"
-        },
-        {
-          "classType": "tool",
-          "from": "falkordb_context_pull"
-        },
-        {
-          "classType": "tool",
-          "from": "rocketride_execution"
-        },
-        {
-          "classType": "tool",
-          "from": "falkordb_writeback"
+          "from": "chat_1"
         }
       ],
       "ui": {
         "position": {
-          "x": 650,
-          "y": 150
+          "x": 360,
+          "y": 240
         },
         "measured": {
-          "width": 160,
-          "height": 80
+          "width": 180,
+          "height": 110
         },
         "nodeType": "default",
         "formDataValid": true
       }
     },
     {
-      "id": "response_1",
+      "id": "response_answers_1",
       "provider": "response_answers",
+      "name": "3. Decision Out (JSON)",
       "config": {
-        "type": "response_answers",
         "laneName": "answers"
       },
       "input": [
         {
           "lane": "answers",
-          "from": "guild_negotiation"
+          "from": "mode_agent"
         }
       ],
       "ui": {
         "position": {
-          "x": 850,
-          "y": 150
+          "x": 680,
+          "y": 240
         },
         "measured": {
-          "width": 160,
-          "height": 80
+          "width": 180,
+          "height": 70
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      }
+    },
+    {
+      "id": "llm_anthropic_1",
+      "provider": "llm_anthropic",
+      "name": "Claude - shared by both agents",
+      "config": {
+        "profile": "claude-sonnet-4-6",
+        "claude-sonnet-4-6": {
+          "apikey": "${ROCKETRIDE_ANTHROPIC_KEY}"
+        },
+        "parameters": {}
+      },
+      "control": [
+        {
+          "classType": "llm",
+          "from": "mode_agent"
+        },
+        {
+          "classType": "llm",
+          "from": "risk_agent"
+        }
+      ],
+      "ui": {
+        "position": {
+          "x": 40,
+          "y": 480
+        },
+        "measured": {
+          "width": 180,
+          "height": 90
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      }
+    },
+    {
+      "id": "memory_mode",
+      "provider": "memory_internal",
+      "name": "Mode Agent memory",
+      "config": {
+        "type": "memory_internal"
+      },
+      "control": [
+        {
+          "classType": "memory",
+          "from": "mode_agent"
+        }
+      ],
+      "ui": {
+        "position": {
+          "x": 260,
+          "y": 480
+        },
+        "measured": {
+          "width": 180,
+          "height": 70
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      }
+    },
+    {
+      "id": "falkordb_write",
+      "provider": "tool_falkordb",
+      "name": "FalkorDB WRITE - Query B",
+      "config": {
+        "type": "tool_falkordb",
+        "host": "${ROCKETRIDE_FALKORDB_HOST}",
+        "port": 6379,
+        "username": "${ROCKETRIDE_FALKORDB_USERNAME}",
+        "password": "${ROCKETRIDE_FALKORDB_PASSWORD}",
+        "tls": false,
+        "graph": "${ROCKETRIDE_FALKORDB_GRAPH}",
+        "allow_writes": true,
+        "max_rows": 250,
+        "query_timeout_ms": 30000
+      },
+      "control": [
+        {
+          "classType": "tool",
+          "from": "mode_agent"
+        }
+      ],
+      "ui": {
+        "position": {
+          "x": 480,
+          "y": 480
+        },
+        "measured": {
+          "width": 180,
+          "height": 60
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      }
+    },
+    {
+      "id": "risk_agent",
+      "provider": "agent_rocketride",
+      "name": "RISK AGENT - called as a tool",
+      "config": {
+        "agent_description": "Risk Agent. Input: a JSON object {hub, product, demand_multiplier}. Reads current stock and baseline weekly demand for that hub from the FalkorDB supply graph, folds in the live demand multiplier, and returns a stockout risk assessment as JSON. Call this before choosing a transport mode.",
+        "instructions": [
+          "You are the Risk Agent in a two-agent supply-chain negotiation. Your caller passes a JSON object with hub, product and demand_multiplier. Use those values verbatim.",
+          "STEP 1 - READ THE GRAPH. Use the falkordb_read tool to run this read-only Cypher, substituting the real hub name for <HUB> and product name for <PRODUCT> (single quotes, exact spelling): MATCH (p:Product {name: '<PRODUCT>'})-[st:STOCKED_AT]->(h:Hub {name: '<HUB>'}) MATCH (p)-[:HAS_DEMAND_HISTORY]->(d:DemandSignal {hub: '<HUB>'}) MATCH (h)-[:HAS_MODE]->(m:TransportMode {mode: 'rail'}) RETURN h.name AS hub, st.units AS current_stock, d.avg_weekly_units AS avg_weekly_demand, m.transit_hrs AS rail_transit_hrs",
+          "STEP 2 - COMPUTE, DO NOT ESTIMATE. Use the python_math tool for every number. Run exactly this arithmetic, filling in the values from STEP 1: effective_weekly_demand = avg_weekly_demand * demand_multiplier; days_of_stock_left = round(current_stock / (effective_weekly_demand / 7), 1); rail_transit_days = round(rail_transit_hrs / 24, 1); risk_level = 'high' if days_of_stock_left < rail_transit_days else 'low'; stockout_gap_days = round(rail_transit_days - days_of_stock_left, 1) if risk_level == 'high' else 0. Print the results as JSON. Never do this arithmetic in your head.",
+          "STEP 3 - ANSWER. Reply with a single raw JSON object and nothing else: no prose, no markdown, no code fences. Shape exactly: {\"hub\": string, \"current_stock\": number, \"avg_weekly_demand\": number, \"effective_weekly_demand\": number, \"days_of_stock_left\": number, \"rail_transit_days\": number, \"risk_level\": \"low\"|\"high\", \"stockout_gap_days\": number}. Do not recommend a transport mode - that is the Mode Agent's decision."
+        ],
+        "max_waves": 8,
+        "parameters": {}
+      },
+      "control": [
+        {
+          "classType": "tool",
+          "from": "mode_agent"
+        }
+      ],
+      "ui": {
+        "position": {
+          "x": 700,
+          "y": 480
+        },
+        "measured": {
+          "width": 180,
+          "height": 110
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      }
+    },
+    {
+      "id": "memory_risk",
+      "provider": "memory_internal",
+      "name": "Risk Agent memory",
+      "config": {
+        "type": "memory_internal"
+      },
+      "control": [
+        {
+          "classType": "memory",
+          "from": "risk_agent"
+        }
+      ],
+      "ui": {
+        "position": {
+          "x": 480,
+          "y": 720
+        },
+        "measured": {
+          "width": 180,
+          "height": 70
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      }
+    },
+    {
+      "id": "falkordb_read",
+      "provider": "tool_falkordb",
+      "name": "FalkorDB READ - Query A",
+      "config": {
+        "type": "tool_falkordb",
+        "host": "${ROCKETRIDE_FALKORDB_HOST}",
+        "port": 6379,
+        "username": "${ROCKETRIDE_FALKORDB_USERNAME}",
+        "password": "${ROCKETRIDE_FALKORDB_PASSWORD}",
+        "tls": false,
+        "graph": "${ROCKETRIDE_FALKORDB_GRAPH}",
+        "allow_writes": false,
+        "max_rows": 250,
+        "query_timeout_ms": 30000
+      },
+      "control": [
+        {
+          "classType": "tool",
+          "from": "risk_agent"
+        },
+        {
+          "classType": "tool",
+          "from": "mode_agent"
+        }
+      ],
+      "ui": {
+        "position": {
+          "x": 700,
+          "y": 720
+        },
+        "measured": {
+          "width": 180,
+          "height": 60
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      }
+    },
+    {
+      "id": "python_math",
+      "provider": "tool_python",
+      "name": "Python - stockout math",
+      "config": {
+        "type": "tool_python",
+        "allowedModules": [],
+        "timeout": 20
+      },
+      "control": [
+        {
+          "classType": "tool",
+          "from": "risk_agent"
+        }
+      ],
+      "ui": {
+        "position": {
+          "x": 920,
+          "y": 720
+        },
+        "measured": {
+          "width": 180,
+          "height": 60
         },
         "nodeType": "default",
         "formDataValid": true
       }
     }
   ],
-  "project_id": "88db64b3-d6c6-47b1-91a9-3d1fce63ee6a",
+  "source": "chat_1",
+  "project_id": "7f38fc77-c944-4085-816d-3368fd6fdcec",
   "viewport": {
     "x": 0,
     "y": 0,
     "zoom": 1
   },
-  "isLocked": false,
-  "snapToGrid": true,
-  "snapGridSize": [
-    10,
-    10
-  ],
-  "version": 1,
-  "docRevision": 1
+  "version": 1
 }

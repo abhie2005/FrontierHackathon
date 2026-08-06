@@ -25,7 +25,7 @@ export interface ExecuteResult {
   ok: boolean;
   hub: string;
   mode: string;
-  transport: "rocketride-runtime" | "local-logs-only";
+  transport: "rocketride-pipeline" | "rocketride-runtime" | "local-logs-only";
   writeBack: unknown;
 }
 
