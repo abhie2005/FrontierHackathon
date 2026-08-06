@@ -16,6 +16,7 @@
     "ui": "node server.cjs",
     "server": "tsx src/server.ts",
     "start": "tsx src/server.ts",
+    "check:rocketride": "tsx src/rocketride/check.ts",
     "laser:listen": "tsx src/laserdata/listen.ts",
     "laser:fire": "tsx src/laserdata/fire.ts",
     "typecheck": "tsc --noEmit"
