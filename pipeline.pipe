@@ -3,7 +3,6 @@
     {
       "id": "chat_1",
       "provider": "chat",
-      "name": "1. Trigger In (demand signal)",
       "config": {
         "hideForm": true,
         "mode": "Source",
@@ -26,7 +25,6 @@
     {
       "id": "mode_agent",
       "provider": "agent_rocketride",
-      "name": "2. MODE AGENT - owns the decision",
       "config": {
         "agent_description": "Mode Agent. Owns the final transport-mode decision for a restock leg from the LA Central warehouse to a regional hub. Delegates stockout risk analysis to risk_agent, reads the transport options from the FalkorDB supply graph, applies the cost-vs-urgency rule, and writes the decision back into the graph.",
         "instructions": [
@@ -62,7 +60,6 @@
     {
       "id": "response_answers_1",
       "provider": "response_answers",
-      "name": "3. Decision Out (JSON)",
       "config": {
         "laneName": "answers"
       },
@@ -88,7 +85,6 @@
     {
       "id": "llm_anthropic_1",
       "provider": "llm_anthropic",
-      "name": "Claude - shared by both agents",
       "config": {
         "profile": "claude-sonnet-4-6",
         "claude-sonnet-4-6": {
@@ -122,7 +118,6 @@
     {
       "id": "memory_mode",
       "provider": "memory_internal",
-      "name": "Mode Agent memory",
       "config": {
         "type": "memory_internal"
       },
@@ -148,7 +143,6 @@
     {
       "id": "falkordb_write",
       "provider": "tool_falkordb",
-      "name": "FalkorDB WRITE - Query B",
       "config": {
         "type": "tool_falkordb",
         "host": "${ROCKETRIDE_FALKORDB_HOST}",
@@ -183,7 +177,6 @@
     {
       "id": "risk_agent",
       "provider": "agent_rocketride",
-      "name": "RISK AGENT - called as a tool",
       "config": {
         "agent_description": "Risk Agent. Input: a JSON object {hub, product, demand_multiplier}. Reads current stock and baseline weekly demand for that hub from the FalkorDB supply graph, folds in the live demand multiplier, and returns a stockout risk assessment as JSON. Call this before choosing a transport mode.",
         "instructions": [
@@ -217,7 +210,6 @@
     {
       "id": "memory_risk",
       "provider": "memory_internal",
-      "name": "Risk Agent memory",
       "config": {
         "type": "memory_internal"
       },
@@ -243,7 +235,6 @@
     {
       "id": "falkordb_read",
       "provider": "tool_falkordb",
-      "name": "FalkorDB READ - Query A",
       "config": {
         "type": "tool_falkordb",
         "host": "${ROCKETRIDE_FALKORDB_HOST}",
@@ -282,7 +273,6 @@
     {
       "id": "python_math",
       "provider": "tool_python",
-      "name": "Python - stockout math",
       "config": {
         "type": "tool_python",
         "allowedModules": [],
